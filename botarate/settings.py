@@ -15,7 +15,9 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 STATIC_ROOT = config('STATIC_ROOT', default=None)
 MEDIA_ROOT = config('MEDIA_ROOT', default=None)
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1", cast=Csv())
+CSRF_TRUSTED_ORIGINS = config("CSRF_TRUSTED_ORIGINS", default="http://localhost,http://127.0.0.1", cast=Csv())
+
 ON_PROD = True if DJANGO_CONFIGURATION == 'Prod' else False
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
