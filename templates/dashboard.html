@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active" aria-current="page">Inicio</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">Cursos</h1>
+    {% if puede_añadir_alumnos %}
+    <a class="btn btn-primary" href="{% url 'alumno_nuevo' %}">Añadir alumna</a>
+    {% endif %}
+</div>
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th scope="col">Curso</th>
+                <th scope="col">Días</th>
+                <th scope="col">Horario</th>
+                <th scope="col">Profesor</th>
+                <th scope="col" class="text-end">Alumnos</th>
+                <th scope="col"><span class="visually-hidden">Clase</span></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for curso in cursos %}
+            <tr>
+                <td><a href="{% url 'curso_detalle' curso.pk %}">{{ curso.nombre }}</a></td>
+                <td>{{ curso.días_semana_display }}</td>
+                <td>{{ curso.hora_inicio|time:'H:i' }} - {{ curso.hora_fin|time:'H:i' }}</td>
+                <td>{{ curso.profesor_principal }}</td>
+                <td class="text-end">{{ curso.total_alumnos }}</td>
+                <td class="text-end">
+                    {% if curso.clase_abierta %}
+                    <a class="btn btn-sm btn-warning" href="{% url 'clase_terminar' curso.clase_abierta.pk %}">Terminar clase</a>
+                    {% elif curso.puede_iniciar_clase %}
+                    <form method="POST" action="{% url 'clase_iniciar' curso.pk %}">
+                        {% csrf_token %}
+                        <button class="btn btn-sm btn-outline-primary" type="submit">Iniciar clase</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="text-body-secondary">Todavía no hay cursos dados de alta.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock content %}

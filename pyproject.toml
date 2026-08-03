@@ -1,0 +1,24 @@
+[project]
+name = "botarate"
+version = "0.1.0"
+description = "Control de asistencias de botarate"
+readme = "README.md"
+requires-python = ">=3.13,<4.0"
+dependencies = [
+    "django (>=5.2.0,<6.0.0)",
+    "python-decouple (>=3.8,<4.0)",
+    "psycopg2 (>=2.9.11,<3.0.0)",
+    "gunicorn (>=23.0.0,<24.0.0)",
+    "django-bootstrap-datepicker-plus (>=5.0.6,<6.0.0)",
+    "django-bootstrap5 (>=26.2,<27.0)",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 120
+lint.select = ["E", "F", "I"]
+
+[tool.ruff.lint.per-file-ignores]
+"*/migrations/*.py" = ["E501"]

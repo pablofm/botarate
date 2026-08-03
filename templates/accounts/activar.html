@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% load static django_bootstrap5  %}
+
+{% block login %}
+<div class="container">
+    <div class="row text-center">
+        <div class=" card p-5 m-5 col-xs-12 col-md-5 col-xxl-4 mx-auto" >
+            <form method="POST">
+                {% csrf_token %}
+                <img class="my-5 img-fluid" src="{% static 'img/logo.jpg' %}" >
+                <div class="alert alert-info" role="alert">
+                    {% for pr in password_requirements %}
+                    <p>{{pr}}</p>
+                    {% endfor %}
+                </div>
+                {% bootstrap_form form %}
+                <button class="btn btn-primary btn-block" type="submit">Activar</button>
+            </form>
+            <a href="{% url 'login' %}">¿Ya tienes cuenta? Accede</a>
+        </div>
+    </div>
+</div>
+{% endblock login %}

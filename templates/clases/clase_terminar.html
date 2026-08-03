@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% load django_bootstrap5 %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Inicio</a></li>
+<li class="breadcrumb-item"><a href="{% url 'curso_detalle' clase.curso.pk %}">{{ clase.curso.nombre }}</a></li>
+<li class="breadcrumb-item active" aria-current="page">Terminar clase</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+<h1 class="h3">Terminar clase</h1>
+<p class="text-body-secondary">
+    {{ clase.curso.nombre }}, empezada a las {{ clase.inicio|time:'H:i' }}
+    del {{ clase.inicio|date:'d/m/Y' }}.
+</p>
+
+<form method="POST">
+    {% csrf_token %}
+    {% bootstrap_form form %}
+    <button class="btn btn-primary" type="submit">Terminar clase</button>
+    <a class="btn btn-link" href="{% url 'dashboard' %}">Volver sin terminar</a>
+</form>
+{% endblock content %}

@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Inicio</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ curso.nombre }}</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+<h1 class="h3">{{ curso.nombre }}</h1>
+<p class="text-body-secondary">
+    {{ curso.días_semana_display }}, de {{ curso.hora_inicio|time:'H:i' }} a {{ curso.hora_fin|time:'H:i' }},
+    con {{ curso.profesor_principal }}.
+    {% with sustitutos=curso.profesores_sustitutos.all %}
+    {% if sustitutos %}
+    Sustitutos: {% for profesor in sustitutos %}{{ profesor }}{% if not forloop.last %}, {% endif %}{% endfor %}.
+    {% endif %}
+    {% endwith %}
+</p>
+
+<h2 class="h5 mt-4">Alumnas ({{ curso.alumnos.all|length }})</h2>
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <tbody>
+            {% for alumno in curso.alumnos.all %}
+            <tr>
+                <td>{{ alumno.nombre }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td class="text-body-secondary">Este curso todavía no tiene alumnas.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if puede_añadir_alumnos %}
+<a class="btn btn-primary" href="{% url 'alumno_nuevo' %}?curso={{ curso.pk }}">Añadir alumna</a>
+{% endif %}
+
+<h2 class="h5 mt-5">Clases impartidas ({{ curso.clases.all|length }})</h2>
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th scope="col">Fecha</th>
+                <th scope="col">Horario</th>
+                <th scope="col">Duración</th>
+                <th scope="col">Profesor</th>
+                <th scope="col">Asistentes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for clase in curso.clases.all %}
+            <tr>
+                <td>{{ clase.inicio|date:'l d/m/Y'|capfirst }}</td>
+                <td>
+                    {{ clase.inicio|time:'H:i' }}
+                    {% if clase.está_abierta %}
+                    <span class="badge text-bg-warning">en curso</span>
+                    {% else %}
+                    - {{ clase.fin|time:'H:i' }}
+                    {% endif %}
+                </td>
+                <td>{{ clase.duración_display|default:'—' }}</td>
+                <td>{{ clase.profesor }}</td>
+                <td>
+                    {{ clase.asistentes.all|length }} de {{ curso.alumnos.all|length }}
+                    {% if clase.asistentes.all %}
+                    <div class="small text-body-secondary">
+                        {% for alumno in clase.asistentes.all %}{{ alumno.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                    </div>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="text-body-secondary">Este curso todavía no tiene clases registradas.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock content %}

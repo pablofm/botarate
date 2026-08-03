@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% load static django_bootstrap5 %}
+
+{% block login %}
+<div class="container">
+    <div class="row text-center">
+        <div class=" card p-5 m-5 col-xs-12 col-md-5 col-xxl-4 mx-auto" >
+            <form method="POST">
+                {% csrf_token %}
+                <img class="my-5 img-fluid" src="{% static 'img/logo.jpg' %}" >
+                {% if activado %}
+                <div class="alert alert-success" role="alert">
+                    <p>Tu contraseña ha sido actualizada. Por favor, accede a continuación.</p>
+                </div>
+                {% endif %}
+                {% bootstrap_form form %}
+                <button class="btn btn-primary btn-block mb-3" type="submit">Acceder</button>
+            </form>
+            <div class="alert alert-info" role="alert">
+                <p>¿Es la primera vez que accedes?<br/><a href="{% url 'activar' %}"> Antes tienes que activar tu cuenta</a></p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock login %}
