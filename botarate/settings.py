@@ -3,6 +3,7 @@ import sys
 from decouple import config
 from pathlib import Path
 from django.urls import reverse_lazy
+from decouple import Csv, config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -14,7 +15,6 @@ DJANGO_CONFIGURATION = config('DJANGO_CONFIGURATION', default='DEV', cast=str)
 DEBUG = config('DEBUG', default=False, cast=bool)
 STATIC_ROOT = config('STATIC_ROOT', default=None)
 MEDIA_ROOT = config('MEDIA_ROOT', default=None)
-
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1", cast=Csv())
 CSRF_TRUSTED_ORIGINS = config("CSRF_TRUSTED_ORIGINS", default="http://localhost,http://127.0.0.1", cast=Csv())
 
@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'accounts',
     'clases',
     # External apps
+    'localflavor',
     'bootstrap_datepicker_plus',
     'django_bootstrap5',
 ]
@@ -131,9 +132,7 @@ if ON_PROD:
     SECURE_HSTS_PRELOAD = True
 
     SECURE_REFERRER_POLICY = 'origin'
-    CSRF_TRUSTED_ORIGINS = ['https://voluntariadowwf.pongoapps.com']
-    SECURE_REFERRER_POLICY = 'origin'
-    ALLOWED_HOSTS = ['voluntariadowwf.pongoapps.com', 'localhost']
+
     import sentry_sdk
     sentry_sdk.init(
         dsn=config('SENTRY_URL'),

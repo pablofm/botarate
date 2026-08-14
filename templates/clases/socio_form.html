@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% load django_bootstrap5 static %}
+
+{# Sin cabecera: al alta se llega por el QR, sin haber entrado en la aplicación. #}
+{% block header %}{% endblock header %}
+
+{% block breadcrumb %}
+{% if user.is_authenticated %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Inicio</a></li>
+<li class="breadcrumb-item"><a href="{% url 'socios' %}">Socias</a></li>
+<li class="breadcrumb-item active" aria-current="page">Nueva socia</li>
+{% endif %}
+{% endblock breadcrumb %}
+
+{% block content %}
+    <div class="col-4 mx-auto">
+        {# El logo es la puerta de entrada del profesorado al control de clases. #}
+        <a href="{% url 'dashboard' %}">
+            <img class="my-5 img-fluid" src="{% static 'img/logo.jpg' %}" alt="Botarate">
+        </a>
+    </div>
+    <p>Para participar en cualquier actividad de Botarate es necesario inscribirse como socia/o. Esta inscripción es un trámite legal que garantiza la cobertura del seguro y el funcionamiento seguro del espacio. Por favor, rellena tus datos y selecciona las opciones que correspondan.</p>
+    <p>En Botarate funcionamos como una asociación cultural sin ánimo de lucro, y por eso todas las personas que participan en nuestras actividades —cursos, talleres, eventos, conciertos, muestras o exposiciones— deben estar inscritas como socias de la asociación.</p>
+    <p>Esta inscripción no implica ningún cargo de gestión ni responsabilidades internas: es un trámite administrativo que nos permite cumplir con la normativa legal y garantizar que todas las actividades del espacio estén cubiertas y protegidas.</p>
+    <strong>Ser socia/o es importante porque: </strong>
+    <ul>
+        <li>Asegura legalmente todas las actividades del centro.</li>
+        <li>Garantiza la cobertura del seguro de responsabilidad civil.</li>
+        <li>Facilita la organización de eventos culturales abiertos al público.</li>
+        <li>Ayuda a sostener la estructura de la asociación y a promover la cultura en la ciudad.</li>
+    </ul>
+    <strong>Con esta inscripción puedes: </strong>
+    <ul>
+        <li>Acceder a cualquier curso o asignatura de la escuela.</li>
+        <li>Participar en eventos, conciertos, muestras, exposiciones y talleres.</li>
+        <li>Formar parte de la comunidad Botarate, incluso si no te apuntas a cursos.</li>
+
+    </ul>
+    <strong>Tus datos se utilizan únicamente para:</strong>
+    <ul>
+        <li>Gestionar tu inscripción como socia/o. </li>
+        <li>Garantizar la cobertura del seguro. </li>
+        <li>Comunicarnos contigo sobre actividades culturales.</li>
+    </ul>
+    <p>Tus datos no se ceden a terceros, no se utilizan para fines comerciales y solo el equipo de gestión de Botarate tiene acceso a ellos.</p>
+    <p>Puedes solicitar en cualquier momento consultar, modificar o eliminar tus datos.</p>
+    <p>Este tratamiento se realiza conforme a la normativa vigente y con el compromiso de cuidar tu privacidad y tu confianza.</p>
+    <div class="container">
+        <div class="row">
+            <div class="card p-5" >
+                <h1 class="h3 mb-3">Hazte socia de Botarate</h1>
+                <form method="POST">
+                    {% csrf_token %}
+                    {% bootstrap_form_errors form type='non_fields' %}
+                    {% bootstrap_field form.nombre %}
+                    {% bootstrap_field form.dni %}
+                    {% bootstrap_field form.teléfono %}
+                    {% bootstrap_field form.email %}
+
+                    <div class="text-start mt-4">
+                        <h2 class="h6">Legales</h2>
+                        {% bootstrap_field form.acepta_tratamiento_datos %}
+                        {% bootstrap_field form.acepta_inscripción %}
+
+                        <h2 class="h6 mt-4">Comunicaciones</h2>
+                        {% bootstrap_field form.quiere_comunicaciones %}
+                        {% bootstrap_field form.quiere_whatsapp %}
+                    </div>
+
+                    <button class="btn btn-primary mt-4" type="submit">Darme de alta</button>
+                    {% if user.is_authenticated %}
+                        <a class="btn btn-link" href="{% url 'socios' %}">Cancelar</a>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+
+    </div>
+{% endblock content %}

@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Inicio</a></li>
+<li class="breadcrumb-item active" aria-current="page">Socias</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">Socias ({{ socios|length }})</h1>
+    <a class="btn btn-primary" href="{% url 'socio_nuevo' %}">Añadir socia</a>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th scope="col">Nombre</th>
+                <th scope="col">DNI</th>
+                <th scope="col">Teléfono</th>
+                <th scope="col">Email</th>
+                <th scope="col">Cursos</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for socio in socios %}
+            <tr>
+                <td>{{ socio.nombre }}</td>
+                <td>{{ socio.dni }}</td>
+                <td><a href="tel:{{ socio.teléfono }}">{{ socio.teléfono }}</a></td>
+                <td><a href="mailto:{{ socio.email }}">{{ socio.email }}</a></td>
+                <td>
+                    {% for curso in socio.alumno.cursos.all %}
+                    <a href="{% url 'curso_detalle' curso.pk %}">{{ curso.nombre }}</a>{% if not forloop.last %}, {% endif %}
+                    {% empty %}
+                    <span class="text-body-secondary">No va a clase</span>
+                    {% endfor %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="text-body-secondary">Todavía no hay socias dadas de alta.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock content %}

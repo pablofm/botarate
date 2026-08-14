@@ -11,6 +11,7 @@ dependencies = [
     "gunicorn (>=23.0.0,<24.0.0)",
     "django-bootstrap-datepicker-plus (>=5.0.6,<6.0.0)",
     "django-bootstrap5 (>=26.2,<27.0)",
+    "django-localflavor>=5.1",
 ]
 
 [tool.uv]

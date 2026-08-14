@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.contrib.auth.decorators import login_not_required
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import PermissionDenied
@@ -6,11 +7,20 @@ from django.db.models import Count, Prefetch
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
+from django.utils.decorators import method_decorator
 from django.utils.functional import cached_property
-from django.views.generic import CreateView, DetailView, ListView, UpdateView, View
+from django.views.generic import (
+    CreateView,
+    DetailView,
+    FormView,
+    ListView,
+    TemplateView,
+    UpdateView,
+    View,
+)
 
-from .forms import TerminarClaseForm
-from .models import Alumno, Clase, Curso
+from .forms import MatricularAlumnaForm, SocioForm, TerminarClaseForm
+from .models import Clase, Curso, Socio
 
 
 class DashboardView(ListView):
@@ -39,7 +49,7 @@ class DashboardView(ListView):
             curso.puede_iniciar_clase = abierta is None and curso.pk in gestionables
 
         context['cursos'] = cursos
-        context['puede_añadir_alumnos'] = bool(gestionables)
+        context['puede_matricular'] = bool(gestionables)
         return context
 
 
@@ -49,22 +59,57 @@ class CursoDetailView(DetailView):
     context_object_name = 'curso'
 
     def get_queryset(self):
-        clases = Clase.objects.select_related('profesor').prefetch_related('asistentes')
+        clases = Clase.objects.select_related('profesor').prefetch_related('asistentes__socio')
         return (super().get_queryset()
                 .select_related('profesor_principal')
-                .prefetch_related('alumnos', Prefetch('clases', queryset=clases)))
+                .prefetch_related('alumnos__socio', Prefetch('clases', queryset=clases)))
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['puede_añadir_alumnos'] = self.object.gestionable_por(self.request.user)
+        context['puede_matricular'] = self.object.gestionable_por(self.request.user)
         return context
 
 
-class AlumnoCreateView(UserPassesTestMixin, SuccessMessageMixin, CreateView):
-    model = Alumno
-    fields = ['nombre', 'curso']
+class SocioListView(ListView):
+    model = Socio
+    template_name = 'clases/socio_list.html'
+    context_object_name = 'socios'
+
+    def get_queryset(self):
+        return super().get_queryset().prefetch_related('alumno__cursos')
+
+
+@method_decorator(login_not_required, name='dispatch')
+class SocioCreateView(SuccessMessageMixin, CreateView):
+    """La portada: cualquiera puede hacerse socio, que es a donde apunta el QR."""
+
+    model = Socio
+    form_class = SocioForm
+    template_name = 'clases/socio_form.html'
+    success_message = '%(nombre)s se ha dado de alta como socia.'
+
+    def get_success_url(self):
+        # Quien llega por el QR no tiene acceso al resto de la aplicación.
+        if self.request.user.is_authenticated:
+            return reverse('socios')
+        return reverse('alta_hecha')
+
+    def get_success_message(self, cleaned_data):
+        if not self.request.user.is_authenticated:
+            return ''
+        return super().get_success_message(cleaned_data)
+
+
+@method_decorator(login_not_required, name='dispatch')
+class AltaHechaView(TemplateView):
+    template_name = 'clases/alta_hecha.html'
+
+
+class MatricularAlumnaView(UserPassesTestMixin, FormView):
+    """Matricula en un curso a alguien que ya es socia, eligiéndola de la lista."""
+
+    form_class = MatricularAlumnaForm
     template_name = 'clases/alumno_form.html'
-    success_message = '%(nombre)s se ha dado de alta en %(curso)s.'
     raise_exception = True
 
     @cached_property
@@ -74,10 +119,8 @@ class AlumnoCreateView(UserPassesTestMixin, SuccessMessageMixin, CreateView):
     def test_func(self):
         return self.cursos_gestionables.exists()
 
-    def get_form(self, form_class=None):
-        form = super().get_form(form_class)
-        form.fields['curso'].queryset = self.cursos_gestionables
-        return form
+    def get_form_kwargs(self):
+        return {**super().get_form_kwargs(), 'cursos': self.cursos_gestionables}
 
     def get_initial(self):
         initial = super().get_initial()
@@ -86,8 +129,14 @@ class AlumnoCreateView(UserPassesTestMixin, SuccessMessageMixin, CreateView):
             initial['curso'] = curso
         return initial
 
+    def form_valid(self, form):
+        alumno = form.matricular()
+        self.curso = form.cleaned_data['curso']
+        messages.success(self.request, f'{alumno} se ha matriculado en {self.curso.nombre}.')
+        return super().form_valid(form)
+
     def get_success_url(self):
-        return reverse('curso_detalle', args=[self.object.curso_id])
+        return reverse('curso_detalle', args=[self.curso.pk])
 
 
 class IniciarClaseView(View):

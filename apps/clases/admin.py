@@ -1,11 +1,16 @@
 from django.contrib import admin
 
 from .forms import ClaseForm, CursoForm
-from .models import Alumno, Clase, Curso, DíaSemana
+from .models import Alumno, Clase, Curso, DíaSemana, Socio
 
 
-class AlumnoInline(admin.TabularInline):
-    model = Alumno
+class MatrículaInline(admin.TabularInline):
+    """Las alumnas del curso, a través de la tabla intermedia de Alumno.cursos."""
+
+    model = Alumno.cursos.through
+    verbose_name = 'alumna'
+    verbose_name_plural = 'alumnas'
+    autocomplete_fields = ('alumno',)
     extra = 1
 
 
@@ -30,7 +35,7 @@ class CursoAdmin(admin.ModelAdmin):
     list_filter = (DíaSemanaFilter, 'profesor_principal', 'profesores_sustitutos')
     search_fields = ('nombre',)
     filter_horizontal = ('profesores_sustitutos',)
-    inlines = [AlumnoInline]
+    inlines = [MatrículaInline]
 
     @admin.display(description='Días')
     def días_semana_display(self, curso):
@@ -41,11 +46,32 @@ class CursoAdmin(admin.ModelAdmin):
         return curso.alumnos.count()
 
 
+@admin.register(Socio)
+class SocioAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'dni', 'teléfono', 'email', 'es_alumno',
+                    'quiere_comunicaciones', 'quiere_whatsapp')
+    list_filter = ('quiere_comunicaciones', 'quiere_whatsapp')
+    search_fields = ('nombre', 'dni', 'teléfono', 'email')
+
+    @admin.display(description='Va a clase', boolean=True)
+    def es_alumno(self, socio):
+        return socio.es_alumno
+
+
 @admin.register(Alumno)
 class AlumnoAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'curso')
-    list_filter = ('curso',)
-    search_fields = ('nombre',)
+    list_display = ('socio', 'cursos_display')
+    list_filter = ('cursos',)
+    search_fields = ('socio__nombre', 'socio__dni', 'socio__teléfono', 'socio__email')
+    autocomplete_fields = ('socio',)
+    filter_horizontal = ('cursos',)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('socio').prefetch_related('cursos')
+
+    @admin.display(description='Cursos')
+    def cursos_display(self, alumno):
+        return ', '.join(curso.nombre for curso in alumno.cursos.all()) or '—'
 
 
 @admin.register(Clase)

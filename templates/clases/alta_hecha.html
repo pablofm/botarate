@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{# Igual que el alta: quien llega por el QR no ve la cabecera de la aplicación. #}
+{% block header %}{% endblock header %}
+
+{% block content %}
+<div class="col-4 mx-auto">
+    <a href="{% url 'dashboard' %}">
+        <img class="my-5 img-fluid" src="{% static 'img/logo.jpg' %}" alt="Botarate">
+    </a>
+</div>
+
+<div class="container">
+    <div class="row text-center">
+        <div class="card p-5 m-5 col-xs-12 col-md-5 col-xxl-4 mx-auto">
+            <h1 class="h3 mb-3">¡Ya eres socia de Botarate!</h1>
+            <p class="text-body-secondary">Hemos guardado tus datos. Habla con tu profesora o profesor para apuntarte a un curso.</p>
+            <a class="btn btn-outline-primary" href="{% url 'socio_nuevo' %}">Dar de alta a otra persona</a>
+        </div>
+    </div>
+</div>
+{% endblock content %}
