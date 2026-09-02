@@ -1,0 +1,12 @@
+/* Un asterisco marca los campos obligatorios; los opcionales van sin él.
+   La clase la pone django-bootstrap5 (BOOTSTRAP5.required_css_class) en el
+   envoltorio del campo. La etiqueta cuelga directamente de ese envoltorio,
+   salvo en las casillas, donde va dentro del .form-check.
+   El texto alternativo vacío tras la barra deja el asterisco solo para la vista:
+   los lectores de pantalla ya anuncian el campo como obligatorio por su
+   atributo required, y así no lo dicen dos veces. */
+.campo-obligatorio > label::after,
+.campo-obligatorio > .form-check > .form-check-label::after {
+    content: " *" / "";
+    color: var(--bs-danger);
+}

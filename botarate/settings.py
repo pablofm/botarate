@@ -76,6 +76,11 @@ TEMPLATES = [
 STATICFILES_DIRS = (
     os.path.join(BASE_DIR, 'static'),
 )
+# django-bootstrap5 pone esta clase en el envoltorio de los campos obligatorios:
+# el asterisco que los marca lo pinta el CSS a partir de ella.
+BOOTSTRAP5 = {
+    'required_css_class': 'campo-obligatorio',
+}
 BOOTSTRAP_DATEPICKER_PLUS = {
     "options": {
         "locale": "es",
