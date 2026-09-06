@@ -1,7 +1,7 @@
 from django.contrib import admin
 
 from .forms import ClaseForm, CursoForm
-from .models import Alumno, Clase, Curso, DíaSemana, Socio
+from .models import Alumno, Clase, Curso, DíaSemana
 
 
 class MatrículaInline(admin.TabularInline):
@@ -44,18 +44,6 @@ class CursoAdmin(admin.ModelAdmin):
     @admin.display(description='Alumnos')
     def total_alumnos(self, curso):
         return curso.alumnos.count()
-
-
-@admin.register(Socio)
-class SocioAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'dni', 'teléfono', 'email', 'es_alumno',
-                    'quiere_comunicaciones', 'quiere_whatsapp')
-    list_filter = ('quiere_comunicaciones', 'quiere_whatsapp')
-    search_fields = ('nombre', 'dni', 'teléfono', 'email')
-
-    @admin.display(description='Va a clase', boolean=True)
-    def es_alumno(self, socio):
-        return socio.es_alumno
 
 
 @admin.register(Alumno)

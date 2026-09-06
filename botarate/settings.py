@@ -1,13 +1,11 @@
 import os
-import sys
-from decouple import config
 from pathlib import Path
-from django.urls import reverse_lazy
+
 from decouple import Csv, config
+from django.urls import reverse_lazy
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
 
 # Fichero .env
 SECRET_KEY = config('SECRET_KEY')
@@ -30,8 +28,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.postgres',
     # Custom
-    'accounts',
-    'clases',
+    'apps.accounts',
+    'apps.clases',
+    'apps.socios',
     # External apps
     'localflavor',
     'bootstrap_datepicker_plus',
