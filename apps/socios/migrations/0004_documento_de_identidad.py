@@ -17,6 +17,10 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('socios', '0003_socios_del_formulario_web'),
+        # clases/0006 carga socios usando «dni», así que tiene que ir antes que el
+        # rename. El estado histórico de una migración no es el de su fichero: es el
+        # del plan, y sin esta arista el orden entre las dos ramas queda al azar.
+        ('clases', '0006_matriculas_del_curso_26_27'),
     ]
 
     operations = [
