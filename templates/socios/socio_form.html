@@ -54,7 +54,8 @@
                     {% csrf_token %}
                     {% bootstrap_form_errors form type='non_fields' %}
                     {% bootstrap_field form.nombre %}
-                    {% bootstrap_field form.dni %}
+                    {% bootstrap_field form.tipo_documento %}
+                    {% bootstrap_field form.documento %}
                     {% bootstrap_field form.teléfono %}
                     {% bootstrap_field form.email %}
 

@@ -50,7 +50,7 @@ class CursoAdmin(admin.ModelAdmin):
 class AlumnoAdmin(admin.ModelAdmin):
     list_display = ('socio', 'cursos_display')
     list_filter = ('cursos',)
-    search_fields = ('socio__nombre', 'socio__dni', 'socio__teléfono', 'socio__email')
+    search_fields = ('socio__nombre', 'socio__documento', 'socio__teléfono', 'socio__email')
     autocomplete_fields = ('socio',)
     filter_horizontal = ('cursos',)
 

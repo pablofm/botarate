@@ -5,6 +5,10 @@ class DNIField(ESIdentityCardNumberField):
     """El DNI/NIE de localflavor, que además comprueba la letra.
 
     A diferencia del campo original, no admite el CIF de las empresas.
+
+    Ya no lo usa ningún modelo: Socio guarda ahora un documento de identidad de
+    texto, porque un pasaporte no cabe en los nueve caracteres que fuerza este
+    campo. Se queda porque las migraciones antiguas lo importan.
     """
 
     def formfield(self, **kwargs):

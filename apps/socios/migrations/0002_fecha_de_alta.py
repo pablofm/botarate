@@ -12,6 +12,9 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('socios', '0001_initial'),
+        # El ALTER TABLE es sobre socios_socio, y quien renombra la tabla a ese
+        # nombre es clases/0004: sin esto el orden depende de la suerte.
+        ('clases', '0004_socio_se_muda_a_su_app'),
     ]
 
     operations = [

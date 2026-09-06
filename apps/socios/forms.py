@@ -8,7 +8,7 @@ class SocioForm(forms.ModelForm):
 
     class Meta:
         model = Socio
-        fields = ['nombre', 'dni', 'teléfono', 'email',
+        fields = ['nombre', 'tipo_documento', 'documento', 'teléfono', 'email',
                   'acepta_tratamiento_datos', 'acepta_inscripción',
                   'quiere_comunicaciones', 'quiere_whatsapp']
 
@@ -22,4 +22,4 @@ class SocioForm(forms.ModelForm):
 
 class SocioChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, socio):
-        return f'{socio.nombre} ({socio.dni})'
+        return f'{socio.nombre} ({socio.documento})'

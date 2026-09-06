@@ -1,8 +1,15 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
+from localflavor.es.forms import ESIdentityCardNumberField
 
-from .fields import DNIField
 from .validators import validar_teléfono
+
+
+class TipoDocumento(models.TextChoices):
+    NIF = 'NIF', 'DNI o NIE'
+    PASAPORTE = 'PAS', 'Pasaporte'
+    OTRO = 'OTRO', 'Otro documento'
 
 
 class Socio(models.Model):
@@ -14,11 +21,19 @@ class Socio(models.Model):
     # No es auto_now_add para poder fijar la fecha real de los socios antiguos.
     fecha_alta = models.DateField('fecha de alta', default=timezone.localdate)
     nombre = models.CharField('nombre completo', max_length=200)
-    dni = DNIField(
-        'DNI',
+    tipo_documento = models.CharField(
+        'tipo de documento',
+        max_length=4,
+        choices=TipoDocumento,
+        default=TipoDocumento.NIF)
+    # Único a secas, no junto al tipo: si no, el mismo número colado como NIF y como
+    # pasaporte serían dos socios distintos, que es el duplicado que se quiere evitar.
+    documento = models.CharField(
+        'documento de identidad',
+        max_length=20,
         unique=True,
-        help_text='DNI o NIE, con la letra',
-        error_messages={'unique': 'Ya hay un socio dado de alta con este DNI.'})
+        help_text='El DNI o NIE con la letra; quien no lo tenga, su pasaporte u otro documento.',
+        error_messages={'unique': 'Ya hay un socio dado de alta con este documento.'})
     teléfono = models.CharField('teléfono', max_length=20, validators=[validar_teléfono])
     email = models.EmailField('email')
     # Los dos primeros consentimientos son obligatorios: quien los exige es SocioForm.
@@ -49,6 +64,13 @@ class Socio(models.Model):
     def clean(self):
         super().clean()
         self.teléfono = ' '.join(self.teléfono.split())
+        self.documento = self.documento.upper().replace(' ', '').replace('-', '')
+        if self.tipo_documento == TipoDocumento.NIF:
+            # La letra la comprueba localflavor; el resto de documentos son texto libre.
+            try:
+                ESIdentityCardNumberField(only_nif=True).clean(self.documento)
+            except ValidationError as error:
+                raise ValidationError({'documento': error.messages}) from error
 
     @property
     def es_alumno(self):

@@ -2,11 +2,12 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import Socio
+from .models import Socio, TipoDocumento
 
 ALTA = {
     'nombre': 'Ana Ruiz',
-    'dni': '12345678Z',
+    'tipo_documento': TipoDocumento.NIF,
+    'documento': '12345678Z',
     'teléfono': '600 123 456',
     'email': 'ana@example.com',
     'acepta_tratamiento_datos': 'on',
@@ -45,23 +46,42 @@ class SocioTests(TestCase):
         self.client.force_login(self.profesor)
 
     def test_alta_de_socia_con_dni_normalizado(self):
-        respuesta = self.client.post(reverse('socio_nuevo'), {**ALTA, 'dni': 'x1234567-l'})
+        respuesta = self.client.post(reverse('socio_nuevo'), {**ALTA, 'documento': 'x1234567-l'})
 
         self.assertRedirects(respuesta, reverse('socios'))
-        self.assertEqual(Socio.objects.get().dni, 'X1234567L')
+        self.assertEqual(Socio.objects.get().documento, 'X1234567L')
 
     def test_rechaza_el_dni_con_letra_incorrecta(self):
-        respuesta = self.client.post(reverse('socio_nuevo'), {**ALTA, 'dni': '12345678A'})
+        respuesta = self.client.post(reverse('socio_nuevo'), {**ALTA, 'documento': '12345678A'})
 
         self.assertContains(respuesta, 'NIF')
         self.assertFalse(Socio.objects.exists())
 
-    def test_rechaza_un_dni_ya_registrado(self):
+    def test_rechaza_un_documento_ya_registrado(self):
         self.client.post(reverse('socio_nuevo'), ALTA)
 
         respuesta = self.client.post(reverse('socio_nuevo'), {**ALTA, 'nombre': 'Ana R.'})
 
-        self.assertContains(respuesta, 'Ya hay un socio dado de alta con este DNI')
+        self.assertContains(respuesta, 'Ya hay un socio dado de alta con este documento')
+        self.assertEqual(Socio.objects.count(), 1)
+
+    def test_alta_de_extranjera_con_pasaporte(self):
+        """Quien no tiene DNI ni NIE se da de alta con otro documento, sin letra que valga."""
+        respuesta = self.client.post(
+            reverse('socio_nuevo'),
+            {**ALTA, 'tipo_documento': TipoDocumento.PASAPORTE, 'documento': '547302118'})
+
+        self.assertRedirects(respuesta, reverse('socios'))
+        self.assertEqual(Socio.objects.get().documento, '547302118')
+
+    def test_el_documento_repetido_lo_es_aunque_cambie_el_tipo(self):
+        self.client.post(reverse('socio_nuevo'), ALTA)
+
+        respuesta = self.client.post(
+            reverse('socio_nuevo'),
+            {**ALTA, 'nombre': 'Otra Ana', 'tipo_documento': TipoDocumento.OTRO})
+
+        self.assertContains(respuesta, 'Ya hay un socio dado de alta con este documento')
         self.assertEqual(Socio.objects.count(), 1)
 
 

@@ -23,7 +23,7 @@
         <thead>
             <tr>
                 <th scope="col">Nombre</th>
-                <th scope="col">DNI</th>
+                <th scope="col">Documento</th>
                 <th scope="col">Teléfono</th>
                 <th scope="col">Email</th>
             </tr>
@@ -33,7 +33,7 @@
             {% with socio=alumno.socio %}
             <tr>
                 <td>{{ socio.nombre }}</td>
-                <td>{{ socio.dni }}</td>
+                <td>{{ socio.documento }}</td>
                 <td><a href="tel:{{ socio.teléfono }}">{{ socio.teléfono }}</a></td>
                 <td><a href="mailto:{{ socio.email }}">{{ socio.email }}</a></td>
             </tr>

@@ -27,7 +27,7 @@ class MatricularAlumnaTests(TestCase):
             hora_fin=datetime.time(19, 30),
             profesor_principal=cls.profesor)
         cls.socia = Socio.objects.create(
-            nombre='Ana Ruiz', dni='12345678Z', teléfono='600 123 456', email='ana@example.com')
+            nombre='Ana Ruiz', documento='12345678Z', teléfono='600 123 456', email='ana@example.com')
 
     def setUp(self):
         self.client.force_login(self.profesor)
@@ -88,7 +88,7 @@ class PáginasTests(TestCase):
             hora_fin=datetime.time(21, 15),
             profesor_principal=cls.profesor)
         socia = Socio.objects.create(
-            nombre='Ana Ruiz', dni='12345678Z', teléfono='600 123 456', email='ana@example.com')
+            nombre='Ana Ruiz', documento='12345678Z', teléfono='600 123 456', email='ana@example.com')
         Alumno.objects.create(socio=socia).cursos.add(cls.curso)
 
     def setUp(self):
@@ -102,7 +102,7 @@ class PáginasTests(TestCase):
 
     def test_el_listado_de_socias_indica_a_qué_cursos_van(self):
         Socio.objects.create(
-            nombre='Eva Gil', dni='X1234567L', teléfono='600 999 888', email='eva@example.com')
+            nombre='Eva Gil', documento='X1234567L', teléfono='600 999 888', email='eva@example.com')
 
         respuesta = self.client.get(reverse('socios'))
 
