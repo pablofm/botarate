@@ -1,6 +1,5 @@
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.utils import timezone
 from localflavor.es.forms import ESIdentityCardNumberField
 
 from .validators import validar_teléfono
@@ -18,8 +17,7 @@ class Socio(models.Model):
     Solo algunos socios van a clase; esos tienen además su ficha de Alumno.
     """
 
-    # No es auto_now_add para poder fijar la fecha real de los socios antiguos.
-    fecha_alta = models.DateField('fecha de alta', default=timezone.localdate)
+    fecha_alta = models.DateTimeField('fecha de alta', auto_now_add=True)
     nombre = models.CharField('nombre completo', max_length=200)
     tipo_documento = models.CharField(
         'tipo de documento',
