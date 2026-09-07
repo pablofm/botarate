@@ -62,7 +62,7 @@ class MatricularAlumnaForm(forms.Form):
 class TerminarClaseForm(forms.ModelForm):
     class Meta:
         model = Clase
-        fields = ['asistentes']
+        fields = ['asistentes', 'reporte']
         labels = {'asistentes': 'Alumnas que han asistido'}
         widgets = {'asistentes': forms.CheckboxSelectMultiple}
 

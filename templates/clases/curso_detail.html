@@ -56,18 +56,19 @@
     <table class="table table-hover align-middle">
         <thead>
             <tr>
-                <th scope="col">Fecha</th>
-                <th scope="col">Horario</th>
-                <th scope="col">Duración</th>
-                <th scope="col">Profesor</th>
-                <th scope="col">Asistentes</th>
+                <th scope="col" class="text-nowrap">Fecha</th>
+                <th scope="col" class="text-nowrap">Horario</th>
+                <th scope="col" class="text-nowrap">Duración</th>
+                <th scope="col" class="text-nowrap">Profesor</th>
+                <th scope="col" class="w-100">Asistentes</th>
+                <th scope="col" class="text-center"><span class="visually-hidden">Reporte</span></th>
             </tr>
         </thead>
         <tbody>
             {% for clase in curso.clases.all %}
             <tr>
-                <td>{{ clase.inicio|date:'l d/m/Y'|capfirst }}</td>
-                <td>
+                <td class="text-nowrap">{{ clase.inicio|date:'l d/m/Y'|capfirst }}</td>
+                <td class="text-nowrap">
                     {{ clase.inicio|time:'H:i' }}
                     {% if clase.está_abierta %}
                     <span class="badge text-bg-warning">en curso</span>
@@ -75,23 +76,70 @@
                     - {{ clase.fin|time:'H:i' }}
                     {% endif %}
                 </td>
-                <td>{{ clase.duración_display|default:'—' }}</td>
-                <td>{{ clase.profesor }}</td>
+                <td class="text-nowrap">{{ clase.duración_display|default:'—' }}</td>
+                <td class="text-nowrap">{{ clase.profesor }}</td>
                 <td>
-                    {{ clase.asistentes.all|length }} de {{ curso.alumnos.all|length }}
-                    {% if clase.asistentes.all %}
-                    <div class="small text-body-secondary">
-                        {% for alumno in clase.asistentes.all %}{{ alumno.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                    {% with asistentes=clase.asistentes.all %}
+                    {% if asistentes %}
+                    <div class="d-flex flex-wrap align-items-center gap-1">
+                        <span class="small text-body-secondary me-1">{{ asistentes|length }} de {{ curso.alumnos.all|length }}:</span>
+                        {% for alumno in asistentes %}
+                        <span class="badge rounded-pill text-bg-light border fw-normal">{{ alumno.socio.nombre }}</span>
+                        {% endfor %}
                     </div>
+                    {% else %}
+                    <span class="text-body-secondary">Sin asistentes</span>
+                    {% endif %}
+                    {% endwith %}
+                </td>
+                <td class="text-center">
+                    {% if clase.reporte %}
+                    <button type="button"
+                            class="btn btn-link p-0 link-secondary"
+                            data-bs-toggle="modal"
+                            data-bs-target="#reporte-{{ clase.pk }}"
+                            title="Esta clase tiene un reporte"
+                            aria-label="Ver el reporte de la clase del {{ clase.inicio|date:'d/m/Y' }}">
+                        <i class="bi bi-chat-left-text" aria-hidden="true"></i>
+                    </button>
+                    {% else %}
+                    <span class="position-relative d-inline-block lh-1 text-body-tertiary"
+                          title="Esta clase no tiene reporte">
+                        <i class="bi bi-chat-left-text" aria-hidden="true"></i>
+                        <i class="bi bi-x-lg position-absolute top-50 start-50 translate-middle text-danger"
+                           aria-hidden="true"></i>
+                        <span class="visually-hidden">Sin reporte</span>
+                    </span>
                     {% endif %}
                 </td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="5" class="text-body-secondary">Este curso todavía no tiene clases registradas.</td>
+                <td colspan="6" class="text-body-secondary">Este curso todavía no tiene clases registradas.</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
+
+{# Los diálogos van fuera de la tabla: dentro de una fila el navegador los sacaría de ahí. #}
+{% for clase in curso.clases.all %}
+{% if clase.reporte %}
+<div class="modal fade" id="reporte-{{ clase.pk }}" tabindex="-1" aria-labelledby="reporte-{{ clase.pk }}-título" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title h6" id="reporte-{{ clase.pk }}-título">
+                    Reporte de la clase del {{ clase.inicio|date:'d/m/Y' }}
+                </h3>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                {{ clase.reporte|linebreaks }}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
 {% endblock content %}

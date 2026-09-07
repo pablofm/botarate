@@ -113,6 +113,7 @@ class Clase(models.Model):
     inicio = models.DateTimeField('hora de inicio')
     fin = models.DateTimeField('Fin de la clase', null=True, blank=True)
     asistentes = models.ManyToManyField(Alumno, blank=True, related_name='clases_asistidas')
+    reporte = models.TextField(null=True, blank=True, help_text='Indica aquí cualquier cosa extraordinaria que haya pasado en clase')
 
     @property
     def está_abierta(self):
