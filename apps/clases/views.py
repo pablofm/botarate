@@ -94,6 +94,21 @@ class MatricularAlumnaView(UserPassesTestMixin, FormView):
         return reverse('curso_detalle', args=[self.curso.pk])
 
 
+class DesmatricularAlumnaView(View):
+    """Elimina la matrícula de una alumna en un curso, sin borrarla como socia."""
+
+    def post(self, request, pk, alumno_pk):
+        curso = get_object_or_404(Curso, pk=pk)
+        if not curso.gestionable_por(request.user):
+            raise PermissionDenied
+
+        alumno = get_object_or_404(curso.alumnos, pk=alumno_pk)
+        # El alumno se queda, aunque sin cursos: sus asistencias a clase son historia.
+        alumno.cursos.remove(curso)
+        messages.success(request, f'{alumno} ya no está matriculada en {curso.nombre}.')
+        return redirect('curso_detalle', pk=curso.pk)
+
+
 class IniciarClaseView(View):
     """Abre una clase del curso indicado, a nombre de quien pulsa el botón."""
 

@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% load django_bootstrap5 %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Inicio</a></li>
+<li class="breadcrumb-item"><a href="{% url 'socios' %}">Socias</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ socio.nombre }}</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+<h1 class="h3 mb-4">Editar la ficha de {{ socio.nombre }}</h1>
+
+<div class="row">
+    <div class="col">
+        {% include "campos_obligatorios.html" %}
+        <form method="POST">
+            {% csrf_token %}
+            {% bootstrap_form_errors form type='non_fields' %}
+            {% bootstrap_field form.nombre %}
+            {% bootstrap_field form.tipo_documento %}
+            {% bootstrap_field form.documento %}
+            {% bootstrap_field form.teléfono %}
+            {% bootstrap_field form.email %}
+
+            <h2 class="h6 mt-4">Legales</h2>
+            {% bootstrap_field form.acepta_tratamiento_datos %}
+            {% bootstrap_field form.acepta_inscripción %}
+
+            <h2 class="h6 mt-4">Comunicaciones</h2>
+            {% bootstrap_field form.quiere_comunicaciones %}
+            {% bootstrap_field form.quiere_whatsapp %}
+
+            <button class="btn btn-primary mt-4" type="submit">Guardar cambios</button>
+            <a class="btn btn-link mt-4" href="{% url 'socios' %}">Cancelar</a>
+        </form>
+    </div>
+</div>
+{% endblock content %}

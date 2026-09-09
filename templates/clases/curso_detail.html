@@ -22,25 +22,30 @@
     <table class="table table-hover align-middle">
         <thead>
             <tr>
-                <th scope="col">Nombre</th>
-                <th scope="col">Documento</th>
-                <th scope="col">Teléfono</th>
-                <th scope="col">Email</th>
+                <th scope="col" class="w-100">Nombre</th>
+                {% if puede_matricular %}
+                <th scope="col" class="text-end"><span class="visually-hidden">Acciones</span></th>
+                {% endif %}
             </tr>
         </thead>
         <tbody>
             {% for alumno in curso.alumnos.all %}
-            {% with socio=alumno.socio %}
             <tr>
-                <td>{{ socio.nombre }}</td>
-                <td>{{ socio.documento }}</td>
-                <td><a href="tel:{{ socio.teléfono }}">{{ socio.teléfono }}</a></td>
-                <td><a href="mailto:{{ socio.email }}">{{ socio.email }}</a></td>
+                <td>{{ alumno.socio.nombre }}</td>
+                {% if puede_matricular %}
+                <td class="text-end">
+                    <button type="button"
+                            class="btn btn-sm btn-outline-danger text-nowrap"
+                            data-bs-toggle="modal"
+                            data-bs-target="#desmatricular-{{ alumno.pk }}">
+                        Eliminar matrícula
+                    </button>
+                </td>
+                {% endif %}
             </tr>
-            {% endwith %}
             {% empty %}
             <tr>
-                <td colspan="4" class="text-body-secondary">Este curso todavía no tiene alumnas.</td>
+                <td colspan="{% if puede_matricular %}2{% else %}1{% endif %}" class="text-body-secondary">Este curso todavía no tiene alumnas.</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -49,6 +54,31 @@
 
 {% if puede_matricular %}
 <a class="btn btn-primary" href="{% url 'alumno_matricular' %}?curso={{ curso.pk }}">Matricular alumna</a>
+
+{# Los diálogos van fuera de la tabla: dentro de una fila el navegador los sacaría de ahí. #}
+{% for alumno in curso.alumnos.all %}
+<div class="modal fade" id="desmatricular-{{ alumno.pk }}" tabindex="-1" aria-labelledby="desmatricular-{{ alumno.pk }}-título" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title h6" id="desmatricular-{{ alumno.pk }}-título">Eliminar matrícula</h3>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                ¿Seguro que quieres dar de baja a {{ alumno.socio.nombre }} de {{ curso.nombre }}?
+                Seguirá siendo socia y se conservarán sus asistencias a las clases ya dadas.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-link" data-bs-dismiss="modal">Cancelar</button>
+                <form method="POST" action="{% url 'alumno_desmatricular' curso.pk alumno.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Eliminar matrícula</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
 {% endif %}
 
 <h2 class="h5 mt-5">Clases impartidas ({{ curso.clases.all|length }})</h2>

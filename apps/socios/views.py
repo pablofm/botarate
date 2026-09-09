@@ -2,7 +2,7 @@ from django.contrib.auth.decorators import login_not_required
 from django.contrib.messages.views import SuccessMessageMixin
 from django.urls import reverse
 from django.utils.decorators import method_decorator
-from django.views.generic import CreateView, ListView, TemplateView
+from django.views.generic import CreateView, ListView, TemplateView, UpdateView
 
 from .forms import SocioForm
 from .models import Socio
@@ -15,6 +15,18 @@ class SocioListView(ListView):
 
     def get_queryset(self):
         return super().get_queryset().prefetch_related('alumno__cursos')
+
+
+class SocioUpdateView(SuccessMessageMixin, UpdateView):
+    """Corrige la ficha de una socia ya dada de alta, desde el listado."""
+
+    model = Socio
+    form_class = SocioForm
+    template_name = 'socios/socio_editar.html'
+    success_message = 'Ficha de %(nombre)s actualizada.'
+
+    def get_success_url(self):
+        return reverse('socios')
 
 
 @method_decorator(login_not_required, name='dispatch')

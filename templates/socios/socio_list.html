@@ -21,12 +21,14 @@
                 <th scope="col">Email</th>
                 <th scope="col">Cursos</th>
                 <th scope="col" class="text-nowrap">Fecha de alta</th>
+                <th scope="col" class="text-center text-nowrap">Comunicaciones</th>
+                <th scope="col" class="text-center">WhatsApp</th>
             </tr>
         </thead>
         <tbody>
             {% for socio in socios %}
             <tr>
-                <td>{{ socio.nombre }}</td>
+                <td><a href="{% url 'socio_editar' socio.pk %}">{{ socio.nombre }}</a></td>
                 <td>{{ socio.documento }}</td>
                 <td><a href="tel:{{ socio.teléfono }}">{{ socio.teléfono }}</a></td>
                 <td><a href="mailto:{{ socio.email }}">{{ socio.email }}</a></td>
@@ -38,10 +40,12 @@
                     {% endfor %}
                 </td>
                 <td class="text-nowrap">{{ socio.fecha_alta|date:'d/m/Y H:i' }}</td>
+                {% include "socios/consentimiento.html" with activo=socio.quiere_comunicaciones etiqueta="Quiere comunicaciones" %}
+                {% include "socios/consentimiento.html" with activo=socio.quiere_whatsapp etiqueta="Quiere WhatsApp" %}
             </tr>
             {% empty %}
             <tr>
-                <td colspan="6" class="text-body-secondary">Todavía no hay socias dadas de alta.</td>
+                <td colspan="8" class="text-body-secondary">Todavía no hay socias dadas de alta.</td>
             </tr>
             {% endfor %}
         </tbody>
