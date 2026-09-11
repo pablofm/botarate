@@ -1,7 +1,11 @@
+import re
+
 from django.contrib.auth.decorators import login_not_required
 from django.contrib.messages.views import SuccessMessageMixin
+from django.db.models import F, Func, Q, Value
 from django.urls import reverse
 from django.utils.decorators import method_decorator
+from django.utils.functional import cached_property
 from django.views.generic import CreateView, ListView, TemplateView, UpdateView
 
 from .forms import SocioForm
@@ -13,8 +17,30 @@ class SocioListView(ListView):
     template_name = 'socios/socio_list.html'
     context_object_name = 'socios'
 
+    # Los separadores que admite validar_teléfono: se ignoran al buscar.
+    SEPARADORES_TELÉFONO = r'[\s.-]'
+
+    @cached_property
+    def búsqueda(self):
+        return self.request.GET.get('q', '').strip()
+
     def get_queryset(self):
-        return super().get_queryset().prefetch_related('alumno__cursos')
+        socios = super().get_queryset().prefetch_related('alumno__cursos')
+        if not self.búsqueda:
+            return socios
+
+        # unaccent se aplica a los dos lados: «Garcia» encuentra «García» y al revés.
+        coincide = (Q(nombre__unaccent__icontains=self.búsqueda)
+                    | Q(documento__icontains=self.búsqueda)
+                    | Q(email__unaccent__icontains=self.búsqueda))
+        # Sin separadores, «600123» encuentra «600 123 456»; si la búsqueda era solo
+        # separadores no queda nada que buscar, y con '' coincidirían todas.
+        if teléfono := re.sub(self.SEPARADORES_TELÉFONO, '', self.búsqueda):
+            socios = socios.annotate(teléfono_sin_separadores=Func(
+                F('teléfono'), Value(self.SEPARADORES_TELÉFONO), Value(''), Value('g'),
+                function='REGEXP_REPLACE'))
+            coincide |= Q(teléfono_sin_separadores__contains=teléfono)
+        return socios.filter(coincide)
 
 
 class SocioUpdateView(SuccessMessageMixin, UpdateView):

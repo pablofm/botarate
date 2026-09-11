@@ -9,6 +9,9 @@
     <h1 class="h3 mb-0">Cursos</h1>
     <div class="d-flex gap-2">
         <a class="btn btn-outline-primary" href="{% url 'socios' %}">Socias</a>
+        {% if user.is_staff or user.is_superuser %}
+        <a class="btn btn-outline-primary" href="{% url 'pagos' %}">Pagos</a>
+        {% endif %}
         {% if puede_matricular %}
         <a class="btn btn-primary" href="{% url 'alumno_matricular' %}">Matricular alumna</a>
         {% endif %}

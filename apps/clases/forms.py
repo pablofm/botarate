@@ -39,11 +39,7 @@ class MatricularAlumnaForm(forms.Form):
         queryset=Socio.objects.all(),
         empty_label='Elige una socia',
         help_text='Si no aparece, hay que darla de alta antes como socia.')
-    curso = forms.ModelChoiceField(label='Curso', queryset=Curso.objects.none(), empty_label=None)
-
-    def __init__(self, *args, cursos, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['curso'].queryset = cursos
+    curso = forms.ModelChoiceField(label='Curso', queryset=Curso.objects.all(), empty_label=None)
 
     def clean(self):
         cleaned_data = super().clean()

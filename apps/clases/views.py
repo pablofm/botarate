@@ -1,13 +1,13 @@
 from django.contrib import messages
-from django.contrib.auth.mixins import UserPassesTestMixin
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Prefetch
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
-from django.utils.functional import cached_property
 from django.views.generic import DetailView, FormView, ListView, UpdateView, View
+
+from apps.accounts.mixins import SoloAdministraciónMixin, es_administración
 
 from .forms import MatricularAlumnaForm, TerminarClaseForm
 from .models import Clase, Curso
@@ -39,7 +39,7 @@ class DashboardView(ListView):
             curso.puede_iniciar_clase = abierta is None and curso.pk in gestionables
 
         context['cursos'] = cursos
-        context['puede_matricular'] = bool(gestionables)
+        context['puede_matricular'] = es_administración(usuario)
         return context
 
 
@@ -56,26 +56,15 @@ class CursoDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['puede_matricular'] = self.object.gestionable_por(self.request.user)
+        context['puede_matricular'] = es_administración(self.request.user)
         return context
 
 
-class MatricularAlumnaView(UserPassesTestMixin, FormView):
+class MatricularAlumnaView(SoloAdministraciónMixin, FormView):
     """Matricula en un curso a alguien que ya es socia, eligiéndola de la lista."""
 
     form_class = MatricularAlumnaForm
     template_name = 'clases/alumno_form.html'
-    raise_exception = True
-
-    @cached_property
-    def cursos_gestionables(self):
-        return Curso.objects.gestionables_por(self.request.user)
-
-    def test_func(self):
-        return self.cursos_gestionables.exists()
-
-    def get_form_kwargs(self):
-        return {**super().get_form_kwargs(), 'cursos': self.cursos_gestionables}
 
     def get_initial(self):
         initial = super().get_initial()
@@ -94,14 +83,11 @@ class MatricularAlumnaView(UserPassesTestMixin, FormView):
         return reverse('curso_detalle', args=[self.curso.pk])
 
 
-class DesmatricularAlumnaView(View):
+class DesmatricularAlumnaView(SoloAdministraciónMixin, View):
     """Elimina la matrícula de una alumna en un curso, sin borrarla como socia."""
 
     def post(self, request, pk, alumno_pk):
         curso = get_object_or_404(Curso, pk=pk)
-        if not curso.gestionable_por(request.user):
-            raise PermissionDenied
-
         alumno = get_object_or_404(curso.alumnos, pk=alumno_pk)
         # El alumno se queda, aunque sin cursos: sus asistencias a clase son historia.
         alumno.cursos.remove(curso)

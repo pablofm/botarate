@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% load django_bootstrap5 %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Inicio</a></li>
+<li class="breadcrumb-item"><a href="{% url 'pagos' %}">Pagos</a></li>
+<li class="breadcrumb-item active" aria-current="page">Registrar pago</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+<h1 class="h3 mb-4">Registrar un pago</h1>
+
+<div class="row">
+    <div class="col-12 col-md-8 col-xl-5">
+        {% include "campos_obligatorios.html" %}
+        <form method="POST">
+            {% csrf_token %}
+            {% bootstrap_form form %}
+            <button class="btn btn-primary" type="submit">Registrar pago</button>
+            <a class="btn btn-link" href="{% url 'pagos' %}">Cancelar</a>
+        </form>
+    </div>
+</div>
+{% endblock content %}

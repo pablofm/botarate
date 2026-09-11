@@ -34,12 +34,20 @@
                 <td>{{ alumno.socio.nombre }}</td>
                 {% if puede_matricular %}
                 <td class="text-end">
-                    <button type="button"
-                            class="btn btn-sm btn-outline-danger text-nowrap"
-                            data-bs-toggle="modal"
-                            data-bs-target="#desmatricular-{{ alumno.pk }}">
-                        Eliminar matrícula
-                    </button>
+                    <div class="d-flex justify-content-end gap-2">
+                        {% if user.is_staff or user.is_superuser %}
+                        <a class="btn btn-sm btn-outline-primary text-nowrap"
+                           href="{% url 'pago_nuevo' %}?alumno={{ alumno.pk }}&amp;curso={{ curso.pk }}">
+                            Registrar pago
+                        </a>
+                        {% endif %}
+                        <button type="button"
+                                class="btn btn-sm btn-outline-danger text-nowrap"
+                                data-bs-toggle="modal"
+                                data-bs-target="#desmatricular-{{ alumno.pk }}">
+                            Eliminar matrícula
+                        </button>
+                    </div>
                 </td>
                 {% endif %}
             </tr>

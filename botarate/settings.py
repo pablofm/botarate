@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     # Custom
     'apps.accounts',
     'apps.clases',
+    'apps.pagos',
     'apps.socios',
     # External apps
     'localflavor',

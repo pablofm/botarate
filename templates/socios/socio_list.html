@@ -11,6 +11,19 @@
     <a class="btn btn-primary" href="{% url 'socio_nuevo' %}">Añadir socia</a>
 </div>
 
+<form class="mb-3" method="GET" action="{% url 'socios' %}" role="search">
+    <div class="input-group">
+        <input class="form-control" type="search" name="q" value="{{ view.búsqueda }}"
+               placeholder="Nombre, documento, teléfono o email" aria-label="Buscar socias">
+        <button class="btn btn-outline-secondary" type="submit">
+            <i class="bi bi-search" aria-hidden="true"></i> Buscar
+        </button>
+        {% if view.búsqueda %}
+        <a class="btn btn-outline-secondary" href="{% url 'socios' %}">Ver todas</a>
+        {% endif %}
+    </div>
+</form>
+
 <div class="table-responsive">
     <table class="table table-hover align-middle">
         <thead>
@@ -45,7 +58,9 @@
             </tr>
             {% empty %}
             <tr>
-                <td colspan="8" class="text-body-secondary">Todavía no hay socias dadas de alta.</td>
+                <td colspan="8" class="text-body-secondary">
+                    {% if view.búsqueda %}Ninguna socia coincide con «{{ view.búsqueda }}».{% else %}Todavía no hay socias dadas de alta.{% endif %}
+                </td>
             </tr>
             {% endfor %}
         </tbody>

@@ -12,6 +12,8 @@ from .models import Alumno, Curso, DíaSemana
 class MatricularAlumnaTests(TestCase):
     @classmethod
     def setUpTestData(cls):
+        cls.administrativo = get_user_model().objects.create_user(
+            email='admin@botarate.es', password='x', is_active=True, is_staff=True)
         cls.profesor = get_user_model().objects.create_user(
             email='profe@botarate.es', password='x', is_active=True)
         cls.curso = Curso.objects.create(
@@ -30,7 +32,7 @@ class MatricularAlumnaTests(TestCase):
             nombre='Ana Ruiz', documento='12345678Z', teléfono='600 123 456', email='ana@example.com')
 
     def setUp(self):
-        self.client.force_login(self.profesor)
+        self.client.force_login(self.administrativo)
 
     def test_se_matricula_eligiendo_socia_sin_repetir_sus_datos(self):
         respuesta = self.client.post(
@@ -57,21 +59,23 @@ class MatricularAlumnaTests(TestCase):
         self.assertContains(respuesta, 'ya está matriculada en Acrobacia')
         self.assertEqual(Alumno.objects.get().cursos.count(), 1)
 
-    def test_solo_ofrece_los_cursos_que_gestiona_quien_matricula(self):
-        otra_profesora = get_user_model().objects.create_user(
-            email='otra@botarate.es', password='x', is_active=True)
-        self.curso.profesores_sustitutos.add(otra_profesora)
-        self.client.force_login(otra_profesora)
-
-        formulario = self.client.get(reverse('alumno_matricular')).context['form']
-
-        self.assertQuerySetEqual(formulario.fields['curso'].queryset, [self.curso])
-
-    def test_no_deja_matricular_a_quien_no_gestiona_ningún_curso(self):
-        self.client.force_login(get_user_model().objects.create_user(
-            email='nadie@botarate.es', password='x', is_active=True))
+    def test_el_profesorado_no_matricula_ni_desmatricula_ni_en_sus_cursos(self):
+        alumna = Alumno.objects.create(socio=self.socia)
+        alumna.cursos.add(self.curso)
+        self.client.force_login(self.profesor)
 
         self.assertEqual(self.client.get(reverse('alumno_matricular')).status_code, 403)
+        respuesta = self.client.post(
+            reverse('alumno_matricular'), {'socio': self.socia.pk, 'curso': self.otro_curso.pk})
+        self.assertEqual(respuesta.status_code, 403)
+        respuesta = self.client.post(reverse('alumno_desmatricular', args=[self.curso.pk, alumna.pk]))
+        self.assertEqual(respuesta.status_code, 403)
+        self.assertQuerySetEqual(alumna.cursos.all(), [self.curso])
+
+        self.assertNotContains(self.client.get(reverse('dashboard')), 'Matricular alumna')
+        ficha = self.client.get(reverse('curso_detalle', args=[self.curso.pk]))
+        self.assertNotContains(ficha, 'Matricular alumna')
+        self.assertNotContains(ficha, 'Eliminar matrícula')
 
 
 class PáginasTests(TestCase):
@@ -94,11 +98,10 @@ class PáginasTests(TestCase):
     def setUp(self):
         self.client.force_login(self.profesor)
 
-    def test_la_ficha_del_curso_lista_a_las_alumnas_con_sus_datos(self):
+    def test_la_ficha_del_curso_lista_a_las_alumnas_por_su_nombre(self):
         respuesta = self.client.get(reverse('curso_detalle', args=[self.curso.pk]))
 
-        for dato in ('Ana Ruiz', '12345678Z', '600 123 456', 'ana@example.com'):
-            self.assertContains(respuesta, dato)
+        self.assertContains(respuesta, 'Ana Ruiz')
 
     def test_el_listado_de_socias_indica_a_qué_cursos_van(self):
         Socio.objects.create(
