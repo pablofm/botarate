@@ -23,6 +23,7 @@
                 <th scope="col" class="text-nowrap">Forma de pago</th>
                 <th scope="col" class="text-end">Importe</th>
                 <th scope="col" class="text-nowrap">Registrado por</th>
+                <th scope="col" class="text-end"><span class="visually-hidden">Acciones</span></th>
             </tr>
         </thead>
         <tbody>
@@ -42,13 +43,48 @@
                 <td>{{ pago.get_forma_pago_display }}</td>
                 <td class="text-end text-nowrap">{{ pago.importe }} €</td>
                 <td>{{ pago.registrado_por }}</td>
+                <td class="text-end">
+                    <button type="button"
+                            class="btn btn-sm btn-outline-danger text-nowrap"
+                            data-bs-toggle="modal"
+                            data-bs-target="#eliminar-pago-{{ pago.pk }}">
+                        Eliminar
+                    </button>
+                </td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="8" class="text-body-secondary">Todavía no hay pagos registrados.</td>
+                <td colspan="9" class="text-body-secondary">Todavía no hay pagos registrados.</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
+
+{# Los diálogos van fuera de la tabla: dentro de una fila el navegador los sacaría de ahí. #}
+{% for pago in pagos %}
+<div class="modal fade" id="eliminar-pago-{{ pago.pk }}" tabindex="-1" aria-labelledby="eliminar-pago-{{ pago.pk }}-título" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title h6" id="eliminar-pago-{{ pago.pk }}-título">Eliminar pago</h3>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                ¿Seguro que quieres eliminar el pago de {{ pago.importe }} € de
+                {{ pago.alumno.socio.nombre }} para {{ pago.curso.nombre }},
+                registrado el {{ pago.fecha|date:'d/m/Y' }}?
+                No se puede deshacer.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-link" data-bs-dismiss="modal">Cancelar</button>
+                <form method="POST" action="{% url 'pago_eliminar' pago.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Eliminar pago</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
 {% endblock content %}

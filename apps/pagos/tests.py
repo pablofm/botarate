@@ -118,13 +118,42 @@ class PagoTests(TestCase):
 
         self.assertContains(self.client.get(reverse('pagos')), 'Ana Ruiz')
 
+    def test_elimina_un_pago_duplicado_sin_tocar_el_bueno(self):
+        self.client.post(reverse('pago_nuevo'), self.datos())
+        self.client.post(reverse('pago_nuevo'), self.datos())
+        bueno, duplicado = Pago.objects.order_by('pk')
+
+        respuesta = self.client.post(reverse('pago_eliminar', args=[duplicado.pk]))
+
+        self.assertRedirects(respuesta, reverse('pagos'))
+        self.assertQuerySetEqual(Pago.objects.all(), [bueno])
+
+    def test_el_listado_ofrece_eliminar_cada_pago(self):
+        self.client.post(reverse('pago_nuevo'), self.datos())
+        pago = Pago.objects.get()
+
+        self.assertContains(self.client.get(reverse('pagos')), reverse('pago_eliminar', args=[pago.pk]))
+
+    def test_eliminar_un_pago_no_se_hace_por_GET(self):
+        self.client.post(reverse('pago_nuevo'), self.datos())
+        pago = Pago.objects.get()
+
+        self.assertEqual(self.client.get(reverse('pago_eliminar', args=[pago.pk])).status_code, 405)
+        self.assertTrue(Pago.objects.exists())
+
     def test_el_profesorado_no_ve_los_pagos(self):
+        self.client.post(reverse('pago_nuevo'), self.datos())
+        pago = Pago.objects.get()
         self.client.force_login(self.profesor)
 
         for nombre in ('pagos', 'pago_nuevo'):
             with self.subTest(url=nombre):
                 self.assertEqual(self.client.get(reverse(nombre)).status_code, 403)
         self.assertNotContains(self.client.get(reverse('curso_detalle', args=[self.curso.pk])), 'Registrar pago')
+
+        self.assertEqual(
+            self.client.post(reverse('pago_eliminar', args=[pago.pk])).status_code, 403)
+        self.assertTrue(Pago.objects.exists())
 
 
 class SumarMesesTests(SimpleTestCase):

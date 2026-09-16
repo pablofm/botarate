@@ -1,6 +1,6 @@
 from django.contrib import messages
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, ListView
+from django.views.generic import CreateView, DeleteView, ListView
 
 from apps.accounts.mixins import SoloAdministraciónMixin
 from apps.clases.models import Alumno
@@ -42,3 +42,22 @@ class PagoCreateView(SoloAdministraciónMixin, CreateView):
             self.request,
             f'Pago de {pago.importe} € de {pago.alumno} para {pago.curso.nombre} registrado.')
         return respuesta
+
+
+class PagoDeleteView(SoloAdministraciónMixin, DeleteView):
+    """Borra un pago mal registrado, normalmente un duplicado."""
+
+    model = Pago
+    success_url = reverse_lazy('pagos')
+    # Se confirma en el diálogo del listado, así que no hay página propia que servir por GET.
+    http_method_names = ['post']
+
+    def get_queryset(self):
+        return super().get_queryset().select_related('alumno__socio', 'curso')
+
+    def form_valid(self, form):
+        pago = self.object
+        messages.success(
+            self.request,
+            f'Pago de {pago.importe} € de {pago.alumno} para {pago.curso.nombre} eliminado.')
+        return super().form_valid(form)
