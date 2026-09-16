@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Inicio</a></li>
+<li class="breadcrumb-item active" aria-current="page">Matrículas</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">Matrículas ({{ alumnas|length }})</h1>
+    <a class="btn btn-primary" href="{% url 'alumno_matricular' %}">Matricular alumna</a>
+</div>
+
+<ul class="list-group">
+    {% for alumna in alumnas %}
+    <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span class="fw-medium">{{ alumna.socio.nombre }}</span>
+        <span class="d-flex flex-wrap justify-content-end gap-1">
+            {% for curso in alumna.cursos.all %}
+            <a class="badge rounded-pill text-bg-light border fw-normal text-decoration-none link-body-emphasis"
+               href="{% url 'curso_detalle' curso.pk %}">{{ curso.nombre }}</a>
+            {% endfor %}
+        </span>
+    </li>
+    {% empty %}
+    <li class="list-group-item text-body-secondary">Todavía no hay ninguna alumna matriculada.</li>
+    {% endfor %}
+</ul>
+{% endblock content %}

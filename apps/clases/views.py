@@ -10,7 +10,7 @@ from django.views.generic import DetailView, FormView, ListView, UpdateView, Vie
 from apps.accounts.mixins import SoloAdministraciónMixin
 
 from .forms import ClaseForm, MatricularAlumnaForm, TerminarClaseForm
-from .models import Clase, Curso
+from .models import Alumno, Clase, Curso
 
 
 class DashboardView(ListView):
@@ -82,6 +82,23 @@ class ClaseUpdateView(SoloAdministraciónMixin, SuccessMessageMixin, UpdateView)
 
     def get_queryset(self):
         return super().get_queryset().select_related('curso')
+
+
+class MatrículaListView(SoloAdministraciónMixin, ListView):
+    """Quién está matriculada en qué, una fila por matrícula."""
+
+    model = Alumno
+    context_object_name = 'alumnas'
+    template_name = 'clases/matricula_list.html'
+
+    def get_queryset(self):
+        # Quien se desmatricula de todo sigue siendo Alumno, pero ya no tiene matrícula
+        # ninguna que listar aquí.
+        return (super().get_queryset()
+                .filter(cursos__isnull=False)
+                .select_related('socio')
+                .prefetch_related('cursos')
+                .distinct())
 
 
 class MatricularAlumnaView(SoloAdministraciónMixin, FormView):

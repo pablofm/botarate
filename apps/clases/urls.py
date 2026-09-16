@@ -8,6 +8,7 @@ from .views import (
     DesmatricularAlumnaView,
     IniciarClaseView,
     MatricularAlumnaView,
+    MatrículaListView,
     TerminarClaseView,
 )
 
@@ -20,5 +21,6 @@ urlpatterns = [
     path('clases/<int:pk>/terminar/', TerminarClaseView.as_view(), name='clase_terminar'),
     path('cursos/<int:pk>/alumnos/<int:alumno_pk>/desmatricular/',
          DesmatricularAlumnaView.as_view(), name='alumno_desmatricular'),
+    path('matriculas/', MatrículaListView.as_view(), name='matriculas'),
     path('alumnos/matricular/', MatricularAlumnaView.as_view(), name='alumno_matricular'),
 ]

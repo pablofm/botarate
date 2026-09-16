@@ -73,10 +73,35 @@ class MatricularAlumnaTests(TestCase):
         self.assertEqual(respuesta.status_code, 403)
         self.assertQuerySetEqual(alumna.cursos.all(), [self.curso])
 
+        self.assertEqual(self.client.get(reverse('matriculas')).status_code, 403)
         self.assertNotContains(self.client.get(reverse('dashboard')), 'Matrículas')
         ficha = self.client.get(reverse('curso_detalle', args=[self.curso.pk]))
-        self.assertNotContains(ficha, 'Matrículas')
+        self.assertNotContains(ficha, 'Matricular alumna')
         self.assertNotContains(ficha, 'Eliminar matrícula')
+
+    def test_el_listado_agrupa_los_cursos_bajo_el_nombre_de_cada_alumna(self):
+        alumna = Alumno.objects.create(socio=self.socia)
+        alumna.cursos.add(self.curso, self.otro_curso)
+
+        respuesta = self.client.get(reverse('matriculas'))
+
+        self.assertQuerySetEqual(respuesta.context['alumnas'], [alumna])
+        # El nombre aparece una sola vez, con sus dos cursos al lado.
+        self.assertContains(respuesta, 'Ana Ruiz', count=1)
+        self.assertContains(respuesta, 'Acrobacia')
+        self.assertContains(respuesta, 'Esgrima escénica')
+        # El botón lleva al formulario de siempre.
+        self.assertContains(respuesta, reverse('alumno_matricular'))
+
+    def test_el_listado_no_saca_a_quien_se_ha_desmatriculado_de_todo(self):
+        alumna = Alumno.objects.create(socio=self.socia)
+        alumna.cursos.add(self.curso)
+        alumna.cursos.remove(self.curso)
+
+        respuesta = self.client.get(reverse('matriculas'))
+
+        self.assertQuerySetEqual(respuesta.context['alumnas'], [])
+        self.assertNotContains(respuesta, 'Ana Ruiz')
 
     def test_la_navegacion_conoce_el_rol_en_cualquier_pagina(self):
         """El context processor da el rol también donde la vista no lo calcula."""

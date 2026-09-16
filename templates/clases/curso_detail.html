@@ -59,7 +59,7 @@
 </div>
 
 {% if es_administración %}
-<a class="btn btn-primary" href="{% url 'alumno_matricular' %}?curso={{ curso.pk }}">Matrículas</a>
+<a class="btn btn-primary" href="{% url 'alumno_matricular' %}?curso={{ curso.pk }}">Matricular alumna</a>
 
 {# Los diálogos van fuera de la tabla: dentro de una fila el navegador los sacaría de ahí. #}
 {% for alumno in curso.alumnos.all %}

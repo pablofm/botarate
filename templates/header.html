@@ -24,9 +24,11 @@
                    href="{% url 'pagos' %}">Pagos</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link{% if vista == 'alumno_matricular' %} active{% endif %}"
-                   {% if vista == 'alumno_matricular' %}aria-current="page"{% endif %}
-                   href="{% url 'alumno_matricular' %}">Matrículas</a>
+                {% if vista == 'matriculas' or vista == 'alumno_matricular' %}
+                <a class="nav-link active" aria-current="page" href="{% url 'matriculas' %}">Matrículas</a>
+                {% else %}
+                <a class="nav-link" href="{% url 'matriculas' %}">Matrículas</a>
+                {% endif %}
             </li>
             {% endif %}
         </ul>
