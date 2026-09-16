@@ -3,10 +3,11 @@ import datetime
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.socios.models import Socio
 
-from .models import Alumno, Curso, DíaSemana
+from .models import Alumno, Clase, Curso, DíaSemana
 
 
 class MatricularAlumnaTests(TestCase):
@@ -72,10 +73,103 @@ class MatricularAlumnaTests(TestCase):
         self.assertEqual(respuesta.status_code, 403)
         self.assertQuerySetEqual(alumna.cursos.all(), [self.curso])
 
-        self.assertNotContains(self.client.get(reverse('dashboard')), 'Matricular alumna')
+        self.assertNotContains(self.client.get(reverse('dashboard')), 'Matrículas')
         ficha = self.client.get(reverse('curso_detalle', args=[self.curso.pk]))
-        self.assertNotContains(ficha, 'Matricular alumna')
+        self.assertNotContains(ficha, 'Matrículas')
         self.assertNotContains(ficha, 'Eliminar matrícula')
+
+    def test_la_navegacion_conoce_el_rol_en_cualquier_pagina(self):
+        """El context processor da el rol también donde la vista no lo calcula."""
+        socios = reverse('socios')
+
+        self.assertContains(self.client.get(socios), 'Matrículas')
+
+        self.client.force_login(self.profesor)
+        self.assertNotContains(self.client.get(socios), 'Matrículas')
+
+
+class ClaseListTests(TestCase):
+    """El listado de clases enseña a cada cual las de los cursos que le tocan."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.administrativo = get_user_model().objects.create_user(
+            email='admin@botarate.es', password='x', is_active=True, is_staff=True)
+        cls.profesor = get_user_model().objects.create_user(
+            email='profe@botarate.es', password='x', is_active=True)
+        cls.otro_profesor = get_user_model().objects.create_user(
+            email='otro@botarate.es', password='x', is_active=True)
+        cls.curso = Curso.objects.create(
+            nombre='Acrobacia',
+            días_semana=[DíaSemana.MARTES],
+            hora_inicio=datetime.time(18, 0),
+            hora_fin=datetime.time(19, 30),
+            profesor_principal=cls.profesor)
+        cls.curso_ajeno = Curso.objects.create(
+            nombre='Esgrima escénica',
+            días_semana=[DíaSemana.VIERNES],
+            hora_inicio=datetime.time(18, 0),
+            hora_fin=datetime.time(19, 30),
+            profesor_principal=cls.otro_profesor)
+
+        inicio = timezone.now() - datetime.timedelta(days=1)
+        cls.clase = Clase.objects.create(
+            curso=cls.curso, profesor=cls.profesor,
+            inicio=inicio, fin=inicio + datetime.timedelta(hours=1))
+        cls.clase_ajena = Clase.objects.create(
+            curso=cls.curso_ajeno, profesor=cls.otro_profesor,
+            inicio=inicio, fin=inicio + datetime.timedelta(hours=1),
+            reporte='Se rompió un florete.')
+
+    def test_el_profesorado_solo_ve_las_clases_de_sus_cursos(self):
+        self.client.force_login(self.profesor)
+
+        respuesta = self.client.get(reverse('clases'))
+
+        self.assertQuerySetEqual(respuesta.context['clases'], [self.clase])
+        self.assertNotContains(respuesta, 'Se rompió un florete.')
+
+    def test_la_administración_ve_todas_las_clases(self):
+        self.client.force_login(self.administrativo)
+
+        respuesta = self.client.get(reverse('clases'))
+
+        self.assertQuerySetEqual(
+            respuesta.context['clases'], [self.clase, self.clase_ajena], ordered=False)
+
+    def test_solo_la_administración_ve_y_usa_el_enlace_de_editar(self):
+        editar = reverse('clase_editar', args=[self.clase.pk])
+
+        self.client.force_login(self.administrativo)
+        self.assertContains(self.client.get(reverse('clases')), editar)
+        self.assertEqual(self.client.get(editar).status_code, 200)
+
+        self.client.force_login(self.profesor)
+        self.assertNotContains(self.client.get(reverse('clases')), editar)
+        self.assertEqual(self.client.get(editar).status_code, 403)
+
+    def test_la_administración_corrige_los_datos_de_una_clase(self):
+        self.client.force_login(self.administrativo)
+
+        respuesta = self.client.post(reverse('clase_editar', args=[self.clase.pk]), {
+            'curso': self.curso.pk,
+            'profesor': self.profesor.pk,
+            'inicio': self.clase.inicio.isoformat(),
+            'fin': self.clase.fin.isoformat(),
+            'reporte': 'Se corrigió la hora.'})
+
+        self.assertRedirects(respuesta, reverse('clases'))
+        self.clase.refresh_from_db()
+        self.assertEqual(self.clase.reporte, 'Se corrigió la hora.')
+
+    def test_un_sustituto_ve_las_clases_del_curso_que_sustituye(self):
+        self.curso_ajeno.profesores_sustitutos.add(self.profesor)
+        self.client.force_login(self.profesor)
+
+        respuesta = self.client.get(reverse('clases'))
+
+        self.assertQuerySetEqual(
+            respuesta.context['clases'], [self.clase, self.clase_ajena], ordered=False)
 
 
 class PáginasTests(TestCase):

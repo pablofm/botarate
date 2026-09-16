@@ -1,8 +1,6 @@
 from django.contrib.auth.mixins import UserPassesTestMixin
 
-
-def es_administración(usuario):
-    return usuario.is_staff or usuario.is_superuser
+from .roles import es_administración
 
 
 class SoloAdministraciónMixin(UserPassesTestMixin):

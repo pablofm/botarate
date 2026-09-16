@@ -2,6 +2,7 @@ from django.conf import settings
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
+from apps.accounts.roles import es_administración
 from apps.socios.models import Socio
 
 
@@ -22,7 +23,7 @@ class CursoQuerySet(models.QuerySet):
         Los administradores, todos; el resto, aquellos de los que son profesor
         principal o sustituto.
         """
-        if usuario.is_staff or usuario.is_superuser:
+        if es_administración(usuario):
             return self
         return self.filter(
             models.Q(profesor_principal=usuario) | models.Q(profesores_sustitutos=usuario)
@@ -53,8 +54,7 @@ class Curso(models.Model):
     objects = CursoQuerySet.as_manager()
 
     def gestionable_por(self, usuario):
-        return (usuario.is_staff
-                or usuario.is_superuser
+        return (es_administración(usuario)
                 or self.profesor_principal_id == usuario.pk
                 or self.profesores_sustitutos.filter(pk=usuario.pk).exists())
 

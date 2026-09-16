@@ -23,7 +23,7 @@
         <thead>
             <tr>
                 <th scope="col" class="w-100">Nombre</th>
-                {% if puede_matricular %}
+                {% if es_administración %}
                 <th scope="col" class="text-end"><span class="visually-hidden">Acciones</span></th>
                 {% endif %}
             </tr>
@@ -32,15 +32,13 @@
             {% for alumno in curso.alumnos.all %}
             <tr>
                 <td>{{ alumno.socio.nombre }}</td>
-                {% if puede_matricular %}
+                {% if es_administración %}
                 <td class="text-end">
                     <div class="d-flex justify-content-end gap-2">
-                        {% if user.is_staff or user.is_superuser %}
                         <a class="btn btn-sm btn-outline-primary text-nowrap"
                            href="{% url 'pago_nuevo' %}?alumno={{ alumno.pk }}&amp;curso={{ curso.pk }}">
                             Registrar pago
                         </a>
-                        {% endif %}
                         <button type="button"
                                 class="btn btn-sm btn-outline-danger text-nowrap"
                                 data-bs-toggle="modal"
@@ -53,15 +51,15 @@
             </tr>
             {% empty %}
             <tr>
-                <td colspan="{% if puede_matricular %}2{% else %}1{% endif %}" class="text-body-secondary">Este curso todavía no tiene alumnas.</td>
+                <td colspan="{% if es_administración %}2{% else %}1{% endif %}" class="text-body-secondary">Este curso todavía no tiene alumnas.</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
 
-{% if puede_matricular %}
-<a class="btn btn-primary" href="{% url 'alumno_matricular' %}?curso={{ curso.pk }}">Matricular alumna</a>
+{% if es_administración %}
+<a class="btn btn-primary" href="{% url 'alumno_matricular' %}?curso={{ curso.pk }}">Matrículas</a>
 
 {# Los diálogos van fuera de la tabla: dentro de una fila el navegador los sacaría de ahí. #}
 {% for alumno in curso.alumnos.all %}

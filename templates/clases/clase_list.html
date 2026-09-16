@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Inicio</a></li>
+<li class="breadcrumb-item active" aria-current="page">Clases</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+<h1 class="h3 mb-4">Clases ({{ clases|length }})</h1>
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th scope="col" class="text-nowrap">Fecha</th>
+                <th scope="col">Curso</th>
+                <th scope="col" class="text-nowrap">Horario</th>
+                <th scope="col" class="text-nowrap">Duración</th>
+                <th scope="col" class="w-100">Asistentes</th>
+                <th scope="col" class="text-center"><span class="visually-hidden">Reporte</span></th>
+                {% if es_administración %}
+                <th scope="col" class="text-end"><span class="visually-hidden">Acciones</span></th>
+                {% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for clase in clases %}
+            <tr>
+                <td class="text-nowrap">{{ clase.inicio|date:'l d/m/Y'|capfirst }}</td>
+                <td class="text-nowrap">
+                    <a href="{% url 'curso_detalle' clase.curso.pk %}">{{ clase.curso.nombre }}</a>
+                </td>
+                <td class="text-nowrap">
+                    {{ clase.inicio|time:'H:i' }}
+                    {% if clase.está_abierta %}
+                    <span class="badge text-bg-warning">en curso</span>
+                    {% else %}
+                    - {{ clase.fin|time:'H:i' }}
+                    {% endif %}
+                </td>
+                <td class="text-nowrap">{{ clase.duración_display|default:'—' }}</td>
+                <td>
+                    {% with asistentes=clase.asistentes.all %}
+                    {% if asistentes %}
+                    <div class="d-flex flex-wrap align-items-center gap-1">
+                        <span class="small text-body-secondary me-1">{{ asistentes|length }}:</span>
+                        {% for alumno in asistentes %}
+                        <span class="badge rounded-pill text-bg-light border fw-normal">{{ alumno.socio.nombre }}</span>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <span class="text-body-secondary">Sin asistentes</span>
+                    {% endif %}
+                    {% endwith %}
+                </td>
+                <td class="text-center">
+                    {% if clase.reporte %}
+                    <button type="button"
+                            class="btn btn-link p-0 link-secondary"
+                            data-bs-toggle="modal"
+                            data-bs-target="#reporte-{{ clase.pk }}"
+                            title="Esta clase tiene un reporte"
+                            aria-label="Ver el reporte de la clase del {{ clase.inicio|date:'d/m/Y' }}">
+                        <i class="bi bi-chat-left-text" aria-hidden="true"></i>
+                    </button>
+                    {% else %}
+                    <span class="position-relative d-inline-block lh-1 text-body-tertiary"
+                          title="Esta clase no tiene reporte">
+                        <i class="bi bi-chat-left-text" aria-hidden="true"></i>
+                        <i class="bi bi-x-lg position-absolute top-50 start-50 translate-middle text-danger"
+                           aria-hidden="true"></i>
+                        <span class="visually-hidden">Sin reporte</span>
+                    </span>
+                    {% endif %}
+                </td>
+                {% if es_administración %}
+                <td class="text-end">
+                    <a class="btn btn-sm btn-outline-primary text-nowrap"
+                       href="{% url 'clase_editar' clase.pk %}"
+                       aria-label="Editar la clase de {{ clase.curso.nombre }} del {{ clase.inicio|date:'d/m/Y' }}">
+                        Editar
+                    </a>
+                </td>
+                {% endif %}
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="{% if es_administración %}7{% else %}6{% endif %}" class="text-body-secondary">Todavía no hay clases registradas.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{# Los diálogos van fuera de la tabla: dentro de una fila el navegador los sacaría de ahí. #}
+{% for clase in clases %}
+{% if clase.reporte %}
+<div class="modal fade" id="reporte-{{ clase.pk }}" tabindex="-1" aria-labelledby="reporte-{{ clase.pk }}-título" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title h6" id="reporte-{{ clase.pk }}-título">
+                    Reporte de la clase de {{ clase.curso.nombre }} del {{ clase.inicio|date:'d/m/Y' }}
+                </h3>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                {{ clase.reporte|linebreaks }}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+{% endblock content %}

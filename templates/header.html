@@ -1,10 +1,35 @@
 {% load static %}
+{% with vista=request.resolver_match.url_name %}
 <nav class="navbar navbar-expand-lg border-bottom mb-3">
     <div class="container-fluid px-0">
         <a class="navbar-brand py-0" href="{% url 'dashboard' %}">
             <img class="d-block" src="{% static 'img/logo.jpg' %}" alt="Botarate" height="40">
         </a>
         {% if user.is_authenticated %}
+        <ul class="navbar-nav flex-row flex-wrap gap-3 me-auto">
+            <li class="nav-item">
+                <a class="nav-link{% if vista == 'socios' %} active{% endif %}"
+                   {% if vista == 'socios' %}aria-current="page"{% endif %}
+                   href="{% url 'socios' %}">Socias</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link{% if vista == 'clases' %} active{% endif %}"
+                   {% if vista == 'clases' %}aria-current="page"{% endif %}
+                   href="{% url 'clases' %}">Clases</a>
+            </li>
+            {% if es_administración %}
+            <li class="nav-item">
+                <a class="nav-link{% if vista == 'pagos' %} active{% endif %}"
+                   {% if vista == 'pagos' %}aria-current="page"{% endif %}
+                   href="{% url 'pagos' %}">Pagos</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link{% if vista == 'alumno_matricular' %} active{% endif %}"
+                   {% if vista == 'alumno_matricular' %}aria-current="page"{% endif %}
+                   href="{% url 'alumno_matricular' %}">Matrículas</a>
+            </li>
+            {% endif %}
+        </ul>
         <div class="d-flex align-items-center gap-3">
             <span class="text-body-secondary">{{ user.email }}</span>
             {% if user.is_staff %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'admin:index' %}">Admin</a>{% endif %}
@@ -16,3 +41,4 @@
         {% endif %}
     </div>
 </nav>
+{% endwith %}

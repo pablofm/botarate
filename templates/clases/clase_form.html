@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% load django_bootstrap5 %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Inicio</a></li>
+<li class="breadcrumb-item"><a href="{% url 'clases' %}">Clases</a></li>
+<li class="breadcrumb-item active" aria-current="page">Editar clase</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+<h1 class="h3">Editar clase</h1>
+<p class="text-body-secondary">
+    {{ clase.curso.nombre }}, del {{ clase.inicio|date:'d/m/Y' }}
+    a las {{ clase.inicio|time:'H:i' }}.
+</p>
+
+<div class="row">
+    <div class="col">
+        {% include "campos_obligatorios.html" %}
+        <form method="POST">
+            {% csrf_token %}
+            {% bootstrap_form form %}
+            <button class="btn btn-primary" type="submit">Guardar cambios</button>
+            <a class="btn btn-link" href="{% url 'clases' %}">Cancelar</a>
+        </form>
+    </div>
+</div>
+{% endblock content %}

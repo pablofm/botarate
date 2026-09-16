@@ -7,9 +7,9 @@ from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views.generic import DetailView, FormView, ListView, UpdateView, View
 
-from apps.accounts.mixins import SoloAdministraciónMixin, es_administración
+from apps.accounts.mixins import SoloAdministraciónMixin
 
-from .forms import MatricularAlumnaForm, TerminarClaseForm
+from .forms import ClaseForm, MatricularAlumnaForm, TerminarClaseForm
 from .models import Clase, Curso
 
 
@@ -39,7 +39,6 @@ class DashboardView(ListView):
             curso.puede_iniciar_clase = abierta is None and curso.pk in gestionables
 
         context['cursos'] = cursos
-        context['puede_matricular'] = es_administración(usuario)
         return context
 
 
@@ -54,10 +53,35 @@ class CursoDetailView(DetailView):
                 .select_related('profesor_principal')
                 .prefetch_related('alumnos__socio', Prefetch('clases', queryset=clases)))
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['puede_matricular'] = es_administración(self.request.user)
-        return context
+
+class ClaseListView(ListView):
+    """Las clases ya impartidas, de las que cada cual ve las de los cursos que le tocan."""
+
+    model = Clase
+    template_name = 'clases/clase_list.html'
+    context_object_name = 'clases'
+
+    def get_queryset(self):
+        # Los cursos gestionables son todos para la administración, así que este
+        # filtro solo acota de verdad al profesorado.
+        return (super().get_queryset()
+                .filter(curso__in=Curso.objects.gestionables_por(self.request.user))
+                .select_related('curso')
+                .prefetch_related('asistentes__socio'))
+
+
+class ClaseUpdateView(SoloAdministraciónMixin, SuccessMessageMixin, UpdateView):
+    """Corrige los datos de una clase ya registrada: horas, asistentes, reporte."""
+
+    model = Clase
+    form_class = ClaseForm
+    template_name = 'clases/clase_form.html'
+    context_object_name = 'clase'
+    success_url = reverse_lazy('clases')
+    success_message = 'Clase de %(curso)s actualizada.'
+
+    def get_queryset(self):
+        return super().get_queryset().select_related('curso')
 
 
 class MatricularAlumnaView(SoloAdministraciónMixin, FormView):
