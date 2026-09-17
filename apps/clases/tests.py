@@ -187,6 +187,50 @@ class ClaseListTests(TestCase):
         self.clase.refresh_from_db()
         self.assertEqual(self.clase.reporte, 'Se corrigió la hora.')
 
+    def test_la_administración_elimina_una_clase_terminada(self):
+        eliminar = reverse('clase_eliminar', args=[self.clase.pk])
+        self.client.force_login(self.administrativo)
+        self.assertContains(self.client.get(reverse('clases')), eliminar)
+
+        respuesta = self.client.post(eliminar)
+
+        self.assertRedirects(respuesta, reverse('clases'))
+        self.assertFalse(Clase.objects.filter(pk=self.clase.pk).exists())
+
+    def test_no_se_elimina_una_clase_sin_terminar(self):
+        abierta = Clase.objects.create(curso=self.curso, profesor=self.profesor, inicio=timezone.now())
+        eliminar = reverse('clase_eliminar', args=[abierta.pk])
+        self.client.force_login(self.administrativo)
+        self.assertNotContains(self.client.get(reverse('clases')), eliminar)
+
+        self.assertEqual(self.client.post(eliminar).status_code, 404)
+        self.assertTrue(Clase.objects.filter(pk=abierta.pk).exists())
+
+    def test_el_profesorado_no_elimina_clases_ni_las_suyas(self):
+        eliminar = reverse('clase_eliminar', args=[self.clase.pk])
+        self.assertEqual(self.clase.profesor, self.profesor)
+        self.client.force_login(self.profesor)
+        self.assertNotContains(self.client.get(reverse('clases')), eliminar)
+
+        self.assertEqual(self.client.post(eliminar).status_code, 403)
+        self.assertTrue(Clase.objects.filter(pk=self.clase.pk).exists())
+
+    def test_la_administración_elimina_clases_que_dio_otro(self):
+        eliminar = reverse('clase_eliminar', args=[self.clase_ajena.pk])
+        self.client.force_login(self.administrativo)
+
+        self.assertRedirects(self.client.post(eliminar), reverse('clases'))
+        self.assertFalse(Clase.objects.filter(pk=self.clase_ajena.pk).exists())
+
+    def test_el_formulario_de_editar_usa_el_selector_de_fecha_y_hora(self):
+        self.client.force_login(self.administrativo)
+
+        respuesta = self.client.get(reverse('clase_editar', args=[self.clase.pk]))
+
+        self.assertContains(respuesta, 'id="id_inicio" data-dbdp-config')
+        self.assertContains(respuesta, 'id="id_fin" data-dbdp-config')
+        self.assertContains(respuesta, 'datepicker-widget.js')
+
     def test_un_sustituto_ve_las_clases_del_curso_que_sustituye(self):
         self.curso_ajeno.profesores_sustitutos.add(self.profesor)
         self.client.force_login(self.profesor)

@@ -1,11 +1,12 @@
 from django.contrib import messages
+from django.contrib.auth.mixins import UserPassesTestMixin
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Prefetch
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
-from django.views.generic import DetailView, FormView, ListView, UpdateView, View
+from django.views.generic import DeleteView, DetailView, FormView, ListView, UpdateView, View
 
 from apps.accounts.mixins import SoloAdministraciónMixin
 
@@ -69,6 +70,14 @@ class ClaseListView(ListView):
                 .select_related('curso')
                 .prefetch_related('asistentes__socio'))
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        clases = list(context['clases'])
+        for clase in clases:
+            clase.puede_eliminar = clase.eliminable_por(self.request.user)
+        context['clases'] = clases
+        return context
+
 
 class ClaseUpdateView(SoloAdministraciónMixin, SuccessMessageMixin, UpdateView):
     """Corrige los datos de una clase ya registrada: horas, asistentes, reporte."""
@@ -82,6 +91,33 @@ class ClaseUpdateView(SoloAdministraciónMixin, SuccessMessageMixin, UpdateView)
 
     def get_queryset(self):
         return super().get_queryset().select_related('curso')
+
+
+class ClaseDeleteView(UserPassesTestMixin, DeleteView):
+    """Borra una clase ya terminada, normalmente una que se registró por error.
+
+    Solo la administración: el profesorado no puede borrar clases, ni siquiera las suyas.
+    """
+
+    model = Clase
+    success_url = reverse_lazy('clases')
+    # Se confirma en el diálogo del listado, así que no hay página propia que servir por GET.
+    http_method_names = ['post']
+    raise_exception = True
+
+    def test_func(self):
+        return self.get_object().eliminable_por(self.request.user)
+
+    def get_queryset(self):
+        # Una clase abierta aún la está dando alguien: primero hay que terminarla.
+        return super().get_queryset().filter(fin__isnull=False).select_related('curso')
+
+    def form_valid(self, form):
+        clase = self.object
+        messages.success(
+            self.request,
+            f'Clase de {clase.curso.nombre} del {timezone.localtime(clase.inicio):%d/%m/%Y} eliminada.')
+        return super().form_valid(form)
 
 
 class MatrículaListView(SoloAdministraciónMixin, ListView):

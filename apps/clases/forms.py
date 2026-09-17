@@ -1,3 +1,4 @@
+from bootstrap_datepicker_plus.widgets import DateTimePickerInput
 from django import forms
 
 from apps.socios.forms import SocioChoiceField
@@ -71,6 +72,10 @@ class ClaseForm(forms.ModelForm):
     class Meta:
         model = Clase
         fields = '__all__'
+        widgets = {
+            'inicio': DateTimePickerInput,
+            'fin': DateTimePickerInput(range_from='inicio'),
+        }
 
     def clean(self):
         cleaned_data = super().clean()

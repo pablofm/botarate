@@ -119,6 +119,10 @@ class Clase(models.Model):
     def está_abierta(self):
         return self.fin is None
 
+    def eliminable_por(self, usuario):
+        """Una clase terminada solo la puede borrar la administración, nunca el profesorado."""
+        return not self.está_abierta and es_administración(usuario)
+
     @property
     def duración_display(self):
         if self.está_abierta:

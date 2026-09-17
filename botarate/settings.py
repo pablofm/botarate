@@ -93,6 +93,9 @@ BOOTSTRAP_DATEPICKER_PLUS = {
         "time": {
             "format": "HH:mm",
         },
+        "datetime": {
+            "format": "DD/MM/YYYY HH:mm",
+        },
     }
 }
 WSGI_APPLICATION = 'botarate.wsgi.application'

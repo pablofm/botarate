@@ -14,7 +14,6 @@
             <tr>
                 <th scope="col" class="text-nowrap">Fecha</th>
                 <th scope="col">Curso</th>
-                <th scope="col" class="text-nowrap">Horario</th>
                 <th scope="col" class="text-nowrap">Duración</th>
                 <th scope="col" class="w-100">Asistentes</th>
                 <th scope="col" class="text-center"><span class="visually-hidden">Reporte</span></th>
@@ -31,19 +30,16 @@
                     <a href="{% url 'curso_detalle' clase.curso.pk %}">{{ clase.curso.nombre }}</a>
                 </td>
                 <td class="text-nowrap">
-                    {{ clase.inicio|time:'H:i' }}
                     {% if clase.está_abierta %}
                     <span class="badge text-bg-warning">en curso</span>
                     {% else %}
-                    - {{ clase.fin|time:'H:i' }}
+                    {{ clase.duración_display }}
                     {% endif %}
                 </td>
-                <td class="text-nowrap">{{ clase.duración_display|default:'—' }}</td>
                 <td>
                     {% with asistentes=clase.asistentes.all %}
                     {% if asistentes %}
                     <div class="d-flex flex-wrap align-items-center gap-1">
-                        <span class="small text-body-secondary me-1">{{ asistentes|length }}:</span>
                         {% for alumno in asistentes %}
                         <span class="badge rounded-pill text-bg-light border fw-normal">{{ alumno.socio.nombre }}</span>
                         {% endfor %}
@@ -74,18 +70,29 @@
                     {% endif %}
                 </td>
                 {% if es_administración %}
-                <td class="text-end">
-                    <a class="btn btn-sm btn-outline-primary text-nowrap"
+                <td class="text-end text-nowrap">
+                    <a class="btn btn-sm btn-outline-primary"
                        href="{% url 'clase_editar' clase.pk %}"
+                       title="Editar"
                        aria-label="Editar la clase de {{ clase.curso.nombre }} del {{ clase.inicio|date:'d/m/Y' }}">
-                        Editar
+                        <i class="bi bi-pencil" aria-hidden="true"></i>
                     </a>
+                    {% if clase.puede_eliminar %}
+                    <button type="button"
+                            class="btn btn-sm btn-outline-danger"
+                            data-bs-toggle="modal"
+                            data-bs-target="#eliminar-clase-{{ clase.pk }}"
+                            title="Eliminar"
+                            aria-label="Eliminar la clase de {{ clase.curso.nombre }} del {{ clase.inicio|date:'d/m/Y' }}">
+                        <i class="bi bi-trash" aria-hidden="true"></i>
+                    </button>
+                    {% endif %}
                 </td>
                 {% endif %}
             </tr>
             {% empty %}
             <tr>
-                <td colspan="{% if es_administración %}7{% else %}6{% endif %}" class="text-body-secondary">Todavía no hay clases registradas.</td>
+                <td colspan="{% if es_administración %}6{% else %}5{% endif %}" class="text-body-secondary">Todavía no hay clases registradas.</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -106,6 +113,30 @@
             </div>
             <div class="modal-body">
                 {{ clase.reporte|linebreaks }}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% if clase.puede_eliminar %}
+<div class="modal fade" id="eliminar-clase-{{ clase.pk }}" tabindex="-1" aria-labelledby="eliminar-clase-{{ clase.pk }}-título" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title h6" id="eliminar-clase-{{ clase.pk }}-título">Eliminar clase</h3>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                ¿Seguro que quieres eliminar la clase de {{ clase.curso.nombre }}
+                del {{ clase.inicio|date:'d/m/Y' }} de {{ clase.inicio|time:'H:i' }} a {{ clase.fin|time:'H:i' }},
+                con sus asistencias? No se puede deshacer.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-link" data-bs-dismiss="modal">Cancelar</button>
+                <form method="POST" action="{% url 'clase_eliminar' clase.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Eliminar clase</button>
+                </form>
             </div>
         </div>
     </div>
