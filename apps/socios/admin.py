@@ -1,10 +1,17 @@
 from django.contrib import admin
 
-from .models import Socio
+from .models import Nota, Socio
+
+
+class NotaInline(admin.TabularInline):
+    model = Nota
+    extra = 0
+    fields = ('fecha', 'texto', 'autor')
 
 
 @admin.register(Socio)
 class SocioAdmin(admin.ModelAdmin):
+    inlines = [NotaInline]
     list_display = ('nombre', 'documento', 'teléfono', 'email', 'fecha_alta', 'es_alumno',
                     'quiere_comunicaciones', 'quiere_whatsapp')
     list_filter = ('tipo_documento', 'fecha_alta', 'quiere_comunicaciones', 'quiere_whatsapp')

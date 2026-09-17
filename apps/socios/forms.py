@@ -1,6 +1,7 @@
+from bootstrap_datepicker_plus.widgets import DatePickerInput
 from django import forms
 
-from .models import Socio
+from .models import Nota, Socio
 
 
 class SocioForm(forms.ModelForm):
@@ -23,3 +24,13 @@ class SocioForm(forms.ModelForm):
 class SocioChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, socio):
         return f'{socio.nombre} ({socio.documento})'
+
+
+class NotaForm(forms.ModelForm):
+    class Meta:
+        model = Nota
+        fields = ['fecha', 'texto']
+        widgets = {
+            'fecha': DatePickerInput,
+            'texto': forms.Textarea(attrs={'rows': 5}),
+        }

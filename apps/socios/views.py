@@ -3,13 +3,14 @@ import re
 from django.contrib.auth.decorators import login_not_required
 from django.contrib.messages.views import SuccessMessageMixin
 from django.db.models import F, Func, Q, Value
+from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.utils.functional import cached_property
 from django.views.generic import CreateView, ListView, TemplateView, UpdateView
 
-from .forms import SocioForm
-from .models import Socio
+from .forms import NotaForm, SocioForm
+from .models import Nota, Socio
 
 
 class SocioListView(ListView):
@@ -51,8 +52,35 @@ class SocioUpdateView(SuccessMessageMixin, UpdateView):
     template_name = 'socios/socio_editar.html'
     success_message = 'Ficha de %(nombre)s actualizada.'
 
+    def get_queryset(self):
+        return super().get_queryset().prefetch_related('notas__autor')
+
     def get_success_url(self):
         return reverse('socios')
+
+
+class NotaCreateView(SuccessMessageMixin, CreateView):
+    """Apunta en la bitácora de una socia una interacción con ella."""
+
+    model = Nota
+    form_class = NotaForm
+    template_name = 'socios/nota_form.html'
+
+    @cached_property
+    def socio(self):
+        return get_object_or_404(Socio, pk=self.kwargs['pk'])
+
+    def form_valid(self, form):
+        form.instance.socio = self.socio
+        form.instance.autor = self.request.user
+        return super().form_valid(form)
+
+    def get_success_message(self, cleaned_data):
+        return f'Nota añadida a la ficha de {self.socio.nombre}.'
+
+    def get_success_url(self):
+        # Se vuelve a la ficha, donde se ve la nota recién añadida en la bitácora.
+        return reverse('socio_editar', args=[self.socio.pk])
 
 
 @method_decorator(login_not_required, name='dispatch')

@@ -1,5 +1,7 @@
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
 from localflavor.es.forms import ESIdentityCardNumberField
 
 from .validators import validar_teléfono
@@ -81,3 +83,28 @@ class Socio(models.Model):
         verbose_name = 'Socio'
         verbose_name_plural = 'Socios'
         ordering = ['nombre']
+
+
+class Nota(models.Model):
+    """Una anotación de la bitácora de un socio: una llamada, una conversación, un aviso."""
+
+    socio = models.ForeignKey(Socio, on_delete=models.CASCADE, related_name='notas', verbose_name='socio')
+    fecha = models.DateField('fecha', default=timezone.localdate)
+    texto = models.TextField('nota')
+    # Quien la escribió; si se borra su cuenta, la nota se queda.
+    autor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='notas_socios',
+        verbose_name='autor')
+    creada = models.DateTimeField('creada', auto_now_add=True)
+
+    def __str__(self):
+        return f'{self.socio} — {self.fecha:%d/%m/%Y}'
+
+    class Meta:
+        verbose_name = 'Nota'
+        verbose_name_plural = 'Notas'
+        ordering = ['-fecha', '-creada']

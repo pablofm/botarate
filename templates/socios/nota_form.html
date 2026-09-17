@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% load django_bootstrap5 %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Inicio</a></li>
+<li class="breadcrumb-item"><a href="{% url 'socios' %}">Socias</a></li>
+<li class="breadcrumb-item"><a href="{% url 'socio_editar' view.socio.pk %}">{{ view.socio.nombre }}</a></li>
+<li class="breadcrumb-item active" aria-current="page">Añadir nota</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+<h1 class="h3 mb-4">Añadir una nota a la ficha de {{ view.socio.nombre }}</h1>
+
+<div class="row">
+    <div class="col">
+        {% include "campos_obligatorios.html" %}
+        <form method="POST">
+            {% csrf_token %}
+            {% bootstrap_form form %}
+            <button class="btn btn-primary" type="submit">Guardar nota</button>
+            <a class="btn btn-link" href="{% url 'socio_editar' view.socio.pk %}">Cancelar</a>
+        </form>
+    </div>
+</div>
+{% endblock content %}
+
+{% block scripts %}{{ form.media }}{% endblock scripts %}

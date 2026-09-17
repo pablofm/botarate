@@ -1,8 +1,11 @@
+import datetime
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
-from .models import Socio, TipoDocumento
+from .models import Nota, Socio, TipoDocumento
 
 ALTA = {
     'nombre': 'Ana Ruiz',
@@ -167,3 +170,63 @@ class ConsentimientosTests(TestCase):
         for casilla in ('acepta_tratamiento_datos', 'acepta_inscripción',
                         'quiere_comunicaciones', 'quiere_whatsapp'):
             self.assertContains(respuesta, f'name="{casilla}"')
+
+
+class NotasTests(TestCase):
+    """La bitácora de cada socia: anotaciones con fecha de las interacciones con ella."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.profesor = get_user_model().objects.create_user(
+            email='profe@botarate.es', password='x', is_active=True)
+        cls.socia = Socio.objects.create(
+            nombre='Ana Ruiz', documento='12345678Z', teléfono='600 123 456', email='ana@example.com')
+
+    def setUp(self):
+        self.client.force_login(self.profesor)
+
+    def test_solo_la_ficha_ofrece_añadir_nota(self):
+        añadir = reverse('nota_nueva', args=[self.socia.pk])
+
+        self.assertNotContains(self.client.get(reverse('socios')), añadir)
+        self.assertContains(self.client.get(reverse('socio_editar', args=[self.socia.pk])), añadir)
+
+    def test_el_teléfono_del_listado_no_es_un_enlace(self):
+        listado = self.client.get(reverse('socios'))
+
+        self.assertContains(listado, '600 123 456')
+        self.assertNotContains(listado, 'href="tel:')
+
+    def test_añade_una_nota_con_fecha_y_texto(self):
+        respuesta = self.client.post(
+            reverse('nota_nueva', args=[self.socia.pk]),
+            {'fecha': '2026-09-10', 'texto': 'Llamó para preguntar por el curso de clown.'})
+
+        ficha = reverse('socio_editar', args=[self.socia.pk])
+        self.assertRedirects(respuesta, ficha)
+        nota = Nota.objects.get()
+        self.assertEqual((nota.socio, nota.autor), (self.socia, self.profesor))
+        self.assertEqual(nota.fecha, datetime.date(2026, 9, 10))
+        self.assertContains(self.client.get(ficha), 'Llamó para preguntar por el curso de clown.')
+
+    def test_la_nota_necesita_texto(self):
+        respuesta = self.client.post(
+            reverse('nota_nueva', args=[self.socia.pk]), {'fecha': '2026-09-10', 'texto': ''})
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertFalse(Nota.objects.exists())
+
+    def test_la_fecha_propone_hoy_y_usa_el_selector(self):
+        respuesta = self.client.get(reverse('nota_nueva', args=[self.socia.pk]))
+
+        self.assertContains(respuesta, 'id="id_fecha" data-dbdp-config')
+        self.assertContains(respuesta, timezone.localdate().isoformat())
+
+    def test_la_bitácora_va_de_la_nota_más_reciente_a_la_más_antigua(self):
+        Nota.objects.create(socio=self.socia, fecha=datetime.date(2026, 1, 5), texto='Antigua')
+        Nota.objects.create(socio=self.socia, fecha=datetime.date(2026, 9, 1), texto='Reciente')
+
+        respuesta = self.client.get(reverse('socio_editar', args=[self.socia.pk]))
+
+        contenido = respuesta.content.decode()
+        self.assertLess(contenido.index('Reciente'), contenido.index('Antigua'))

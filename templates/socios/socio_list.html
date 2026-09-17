@@ -29,22 +29,15 @@
         <thead>
             <tr>
                 <th scope="col">Nombre</th>
-                <th scope="col">Documento</th>
                 <th scope="col">Teléfono</th>
-                <th scope="col">Email</th>
                 <th scope="col">Cursos</th>
-                <th scope="col" class="text-nowrap">Fecha de alta</th>
-                <th scope="col" class="text-center text-nowrap">Comunicaciones</th>
-                <th scope="col" class="text-center">WhatsApp</th>
             </tr>
         </thead>
         <tbody>
             {% for socio in socios %}
             <tr>
                 <td><a href="{% url 'socio_editar' socio.pk %}">{{ socio.nombre }}</a></td>
-                <td>{{ socio.documento }}</td>
-                <td><a href="tel:{{ socio.teléfono }}">{{ socio.teléfono }}</a></td>
-                <td><a href="mailto:{{ socio.email }}">{{ socio.email }}</a></td>
+                <td class="text-nowrap">{{ socio.teléfono }}</td>
                 <td>
                     {% for curso in socio.alumno.cursos.all %}
                     <a href="{% url 'curso_detalle' curso.pk %}">{{ curso.nombre }}</a>{% if not forloop.last %}, {% endif %}
@@ -52,13 +45,10 @@
                     <span class="text-body-secondary">No va a clase</span>
                     {% endfor %}
                 </td>
-                <td class="text-nowrap">{{ socio.fecha_alta|date:'d/m/Y H:i' }}</td>
-                {% include "socios/consentimiento.html" with activo=socio.quiere_comunicaciones etiqueta="Quiere comunicaciones" %}
-                {% include "socios/consentimiento.html" with activo=socio.quiere_whatsapp etiqueta="Quiere WhatsApp" %}
             </tr>
             {% empty %}
             <tr>
-                <td colspan="8" class="text-body-secondary">
+                <td colspan="3" class="text-body-secondary">
                     {% if view.búsqueda %}Ninguna socia coincide con «{{ view.búsqueda }}».{% else %}Todavía no hay socias dadas de alta.{% endif %}
                 </td>
             </tr>
