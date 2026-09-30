@@ -31,7 +31,11 @@
         <tbody>
             {% for alumno in curso.alumnos.all %}
             <tr>
+                {% if es_administración %}
+                <td><a href="{% url 'socio_editar' alumno.socio.pk %}">{{ alumno.socio.nombre }}</a></td>
+                {% else %}
                 <td>{{ alumno.socio.nombre }}</td>
+                {% endif %}
                 {% if es_administración %}
                 <td class="text-end">
                     <div class="d-flex justify-content-end gap-2">

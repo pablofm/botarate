@@ -79,6 +79,19 @@ class MatricularAlumnaTests(TestCase):
         self.assertNotContains(ficha, 'Matricular alumna')
         self.assertNotContains(ficha, 'Eliminar matrícula')
 
+    def test_solo_la_administración_ve_el_enlace_a_la_ficha_de_socia_en_el_curso(self):
+        alumna = Alumno.objects.create(socio=self.socia)
+        alumna.cursos.add(self.curso)
+        detalle = reverse('curso_detalle', args=[self.curso.pk])
+        ficha = reverse('socio_editar', args=[self.socia.pk])
+
+        self.assertContains(self.client.get(detalle), f'href="{ficha}"')
+
+        self.client.force_login(self.profesor)
+        respuesta = self.client.get(detalle)
+        self.assertContains(respuesta, 'Ana Ruiz')
+        self.assertNotContains(respuesta, f'href="{ficha}"')
+
     def test_el_listado_agrupa_los_cursos_bajo_el_nombre_de_cada_alumna(self):
         alumna = Alumno.objects.create(socio=self.socia)
         alumna.cursos.add(self.curso, self.otro_curso)
