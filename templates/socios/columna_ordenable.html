@@ -1,0 +1,6 @@
+<th scope="col" class="text-nowrap{% if clase %} {{ clase }}{% endif %}"{% if columna.sentido %} aria-sort="{{ columna.sentido }}"{% endif %}>
+    <a class="link-body-emphasis link-underline link-underline-opacity-0 link-underline-opacity-75-hover"
+       href="{{ columna.url }}">{{ texto }}{% if columna.sentido == 'ascending' %}
+        <i class="bi bi-caret-up-fill small" aria-hidden="true"></i>{% elif columna.sentido == 'descending' %}
+        <i class="bi bi-caret-down-fill small" aria-hidden="true"></i>{% endif %}</a>
+</th>

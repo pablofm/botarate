@@ -5,6 +5,8 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from apps.clases.models import Alumno, Curso, DíaSemana
+
 from .models import Nota, Socio, TipoDocumento
 
 ALTA = {
@@ -142,6 +144,72 @@ class BuscadorSociosTests(TestCase):
         self.assertContains(respuesta, 'Ver todas')
 
 
+class OrdenSociosTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.profesor = get_user_model().objects.create_user(
+            email='profe@botarate.es', password='x', is_active=True)
+        cls.ana = Socio.objects.create(
+            nombre='Ana Ruiz', documento='12345678Z', teléfono='600 123 456', email='ana@example.com')
+        cls.eva = Socio.objects.create(
+            nombre='Eva Gil', documento='X1234567L', teléfono='611 999 888', email='eva@correo.es')
+        cls.zoe = Socio.objects.create(
+            nombre='Zoe Paz', documento='Y1234567X', teléfono='622 333 444', email='zoe@example.com')
+        # auto_now_add no deja elegir la fecha al crear: Eva es la más antigua y Ana la más reciente.
+        for socia, día in ((cls.eva, 1), (cls.zoe, 2), (cls.ana, 3)):
+            Socio.objects.filter(pk=socia.pk).update(
+                fecha_alta=datetime.datetime(2026, 9, día, tzinfo=datetime.timezone.utc))
+
+        horario = {'días_semana': [DíaSemana.LUNES], 'hora_inicio': datetime.time(18, 0),
+                   'hora_fin': datetime.time(20, 0), 'profesor_principal': cls.profesor}
+        acrobacia = Curso.objects.create(nombre='Acrobacia', **horario)
+        clown = Curso.objects.create(nombre='Clown', **horario)
+        Alumno.objects.create(socio=cls.zoe).cursos.set([acrobacia, clown])
+        Alumno.objects.create(socio=cls.ana).cursos.set([clown])
+
+        for _ in range(2):
+            Nota.objects.create(socio=cls.eva, texto='Llamó.')
+        Nota.objects.create(socio=cls.zoe, texto='Llamó.')
+
+    def setUp(self):
+        self.client.force_login(self.profesor)
+
+    def nombres(self, orden, búsqueda=''):
+        respuesta = self.client.get(reverse('socios'), {'orden': orden, 'q': búsqueda})
+        return [socia.nombre for socia in respuesta.context['socios']]
+
+    def test_ordena_por_cada_columna_en_los_dos_sentidos(self):
+        casos = {
+            'nombre': ['Ana Ruiz', 'Eva Gil', 'Zoe Paz'],
+            '-nombre': ['Zoe Paz', 'Eva Gil', 'Ana Ruiz'],
+            'fecha_alta': ['Eva Gil', 'Zoe Paz', 'Ana Ruiz'],
+            '-fecha_alta': ['Ana Ruiz', 'Zoe Paz', 'Eva Gil'],
+            'notas': ['Ana Ruiz', 'Zoe Paz', 'Eva Gil'],
+            '-notas': ['Eva Gil', 'Zoe Paz', 'Ana Ruiz'],
+            # Por el primer curso de cada una; quien no va a clase, siempre al final.
+            'cursos': ['Zoe Paz', 'Ana Ruiz', 'Eva Gil'],
+            '-cursos': ['Ana Ruiz', 'Zoe Paz', 'Eva Gil'],
+        }
+        for orden, nombres in casos.items():
+            with self.subTest(orden=orden):
+                self.assertEqual(self.nombres(orden), nombres)
+
+    def test_un_orden_desconocido_ordena_por_nombre(self):
+        self.assertEqual(self.nombres('documento'), ['Ana Ruiz', 'Eva Gil', 'Zoe Paz'])
+
+    def test_ordena_también_los_resultados_de_una_búsqueda(self):
+        self.assertEqual(self.nombres('-notas', búsqueda='example'), ['Zoe Paz', 'Ana Ruiz'])
+
+    def test_la_cabecera_indica_el_orden_y_le_da_la_vuelta(self):
+        respuesta = self.client.get(reverse('socios'), {'orden': 'notas', 'q': 'example'})
+
+        self.assertContains(respuesta, 'aria-sort="ascending"', count=1)
+        self.assertEqual(respuesta.context['columnas']['notas']['url'], '?q=example&orden=-notas')
+        # Las demás columnas empiezan por su sentido natural.
+        self.assertEqual(respuesta.context['columnas']['fecha_alta']['url'], '?q=example&orden=-fecha_alta')
+        self.assertEqual(respuesta.context['columnas']['nombre']['url'], '?q=example&orden=nombre')
+
+
 class ConsentimientosTests(TestCase):
     def test_no_deja_darse_de_alta_sin_aceptar_los_dos_obligatorios(self):
         for obligatorio in ('acepta_tratamiento_datos', 'acepta_inscripción'):
@@ -185,17 +253,39 @@ class NotasTests(TestCase):
     def setUp(self):
         self.client.force_login(self.profesor)
 
-    def test_solo_la_ficha_ofrece_añadir_nota(self):
+    def test_el_listado_y_la_ficha_ofrecen_añadir_nota(self):
         añadir = reverse('nota_nueva', args=[self.socia.pk])
 
-        self.assertNotContains(self.client.get(reverse('socios')), añadir)
+        self.assertContains(self.client.get(reverse('socios')), añadir)
         self.assertContains(self.client.get(reverse('socio_editar', args=[self.socia.pk])), añadir)
+
+    def test_el_listado_muestra_las_notas_previas(self):
+        Nota.objects.create(socio=self.socia, autor=self.profesor, texto='Pregunta por el curso de clown.')
+
+        listado = self.client.get(reverse('socios'))
+
+        self.assertContains(listado, f'id="notas-{self.socia.pk}"')
+        self.assertContains(listado, 'Pregunta por el curso de clown.')
+        self.assertNotContains(listado, 'Sin notas')
+
+    def test_el_listado_indica_que_no_hay_notas(self):
+        listado = self.client.get(reverse('socios'))
+
+        self.assertContains(listado, 'Sin notas')
+        self.assertNotContains(listado, f'id="notas-{self.socia.pk}"')
 
     def test_el_teléfono_del_listado_no_es_un_enlace(self):
         listado = self.client.get(reverse('socios'))
 
         self.assertContains(listado, '600 123 456')
         self.assertNotContains(listado, 'href="tel:')
+
+    def test_el_listado_muestra_la_fecha_de_alta_en_hora_de_madrid(self):
+        # A las 23:30 UTC del 31 de diciembre ya es 1 de enero en Madrid.
+        Socio.objects.filter(pk=self.socia.pk).update(
+            fecha_alta=datetime.datetime(2025, 12, 31, 23, 30, tzinfo=datetime.timezone.utc))
+
+        self.assertContains(self.client.get(reverse('socios')), '01/01/2026')
 
     def test_añade_una_nota_con_fecha_y_texto(self):
         respuesta = self.client.post(

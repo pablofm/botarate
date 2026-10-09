@@ -15,11 +15,13 @@
     <div class="input-group">
         <input class="form-control" type="search" name="q" value="{{ view.búsqueda }}"
                placeholder="Nombre, documento, teléfono o email" aria-label="Buscar socias">
+        {# Al buscar se mantiene el orden elegido. #}
+        <input type="hidden" name="orden" value="{{ view.orden }}">
         <button class="btn btn-outline-secondary" type="submit">
             <i class="bi bi-search" aria-hidden="true"></i> Buscar
         </button>
         {% if view.búsqueda %}
-        <a class="btn btn-outline-secondary" href="{% url 'socios' %}">Ver todas</a>
+        <a class="btn btn-outline-secondary" href="{% url 'socios' %}?orden={{ view.orden|urlencode }}">Ver todas</a>
         {% endif %}
     </div>
 </form>
@@ -28,14 +30,18 @@
     <table class="table table-hover align-middle">
         <thead>
             <tr>
-                <th scope="col">Nombre</th>
+                {% include 'socios/columna_ordenable.html' with columna=columnas.fecha_alta texto='Fecha de alta' %}
+                {% include 'socios/columna_ordenable.html' with columna=columnas.nombre texto='Nombre' %}
                 <th scope="col">Teléfono</th>
-                <th scope="col">Cursos</th>
+                {% include 'socios/columna_ordenable.html' with columna=columnas.cursos texto='Cursos' %}
+                {% include 'socios/columna_ordenable.html' with columna=columnas.notas texto='Notas' clase='text-center' %}
+                <th scope="col" class="text-end"><span class="visually-hidden">Acciones</span></th>
             </tr>
         </thead>
         <tbody>
             {% for socio in socios %}
             <tr>
+                <td class="text-nowrap">{{ socio.fecha_alta|date:'d/m/Y' }}</td>
                 <td><a href="{% url 'socio_editar' socio.pk %}">{{ socio.nombre }}</a></td>
                 <td class="text-nowrap">{{ socio.teléfono }}</td>
                 <td>
@@ -45,10 +51,38 @@
                     <span class="text-body-secondary">No va a clase</span>
                     {% endfor %}
                 </td>
+                <td class="text-center">
+                    {% if socio.notas.all %}
+                    <button type="button"
+                            class="btn btn-link p-0 link-secondary"
+                            data-bs-toggle="modal"
+                            data-bs-target="#notas-{{ socio.pk }}"
+                            title="{{ socio.nombre }} tiene notas"
+                            aria-label="Ver las notas de {{ socio.nombre }}">
+                        <i class="bi bi-journal-text" aria-hidden="true"></i>
+                    </button>
+                    {% else %}
+                    <span class="position-relative d-inline-block lh-1 text-body-tertiary"
+                          title="{{ socio.nombre }} no tiene notas">
+                        <i class="bi bi-journal-text" aria-hidden="true"></i>
+                        <i class="bi bi-x-lg position-absolute top-50 start-50 translate-middle text-danger"
+                           aria-hidden="true"></i>
+                        <span class="visually-hidden">Sin notas</span>
+                    </span>
+                    {% endif %}
+                </td>
+                <td class="text-end text-nowrap">
+                    <a class="btn btn-sm btn-outline-primary"
+                       href="{% url 'nota_nueva' socio.pk %}"
+                       title="Añadir nota"
+                       aria-label="Añadir una nota a la ficha de {{ socio.nombre }}">
+                        <i class="bi bi-journal-plus" aria-hidden="true"></i>
+                    </a>
+                </td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="3" class="text-body-secondary">
+                <td colspan="6" class="text-body-secondary">
                     {% if view.búsqueda %}Ninguna socia coincide con «{{ view.búsqueda }}».{% else %}Todavía no hay socias dadas de alta.{% endif %}
                 </td>
             </tr>
@@ -56,4 +90,37 @@
         </tbody>
     </table>
 </div>
+
+{# Los diálogos van fuera de la tabla: dentro de una fila el navegador los sacaría de ahí. #}
+{% for socio in socios %}
+{% with notas=socio.notas.all %}
+{% if notas %}
+<div class="modal fade" id="notas-{{ socio.pk }}" tabindex="-1" aria-labelledby="notas-{{ socio.pk }}-título" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title h6" id="notas-{{ socio.pk }}-título">Notas de {{ socio.nombre }}</h3>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <ul class="list-group list-group-flush">
+                    {% for nota in notas %}
+                    <li class="list-group-item px-0">
+                        <div class="small text-body-secondary mb-1">
+                            {{ nota.fecha|date:'l d/m/Y'|capfirst }}{% if nota.autor %} · {{ nota.autor }}{% endif %}
+                        </div>
+                        {{ nota.texto|linebreaks }}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <a class="btn btn-primary" href="{% url 'nota_nueva' socio.pk %}">Añadir nota</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endwith %}
+{% endfor %}
 {% endblock content %}

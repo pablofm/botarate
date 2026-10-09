@@ -20,3 +20,13 @@ class SocioAdmin(admin.ModelAdmin):
     @admin.display(description='Va a clase', boolean=True)
     def es_alumno(self, socio):
         return socio.es_alumno
+
+
+@admin.register(Nota)
+class NotaAdmin(admin.ModelAdmin):
+    list_display = ('socio', 'fecha', 'texto', 'autor', 'creada')
+    list_filter = ('fecha', 'autor')
+    list_select_related = ('socio', 'autor')
+    search_fields = ('socio__nombre', 'texto')
+    autocomplete_fields = ('socio',)
+    date_hierarchy = 'fecha'
