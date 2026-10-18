@@ -22,5 +22,6 @@ urlpatterns = [
     path('', include('apps.socios.urls')),
     path('', include('apps.clases.urls')),
     path('', include('apps.pagos.urls')),
+    path('', include('apps.ambigu.urls')),
     path('', include('apps.accounts.urls')),
 ]

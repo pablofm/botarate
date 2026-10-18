@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'apps.clases',
     'apps.pagos',
     'apps.socios',
+    'apps.ambigu',
     # External apps
     'localflavor',
     'bootstrap_datepicker_plus',

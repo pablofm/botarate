@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Inicio</a></li>
+<li class="breadcrumb-item active" aria-current="page">Ambigú</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% include "ambigu/pestanas.html" with actual='bebidas' %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">Bebidas ({{ bebidas|length }})</h1>
+    <a class="btn btn-primary" href="{% url 'bebida_nueva' %}">Registrar bebida</a>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th scope="col">Bebida</th>
+                <th scope="col">Categoría</th>
+                <th scope="col" class="text-end">PVP</th>
+                <th scope="col" class="text-end text-nowrap">Stock mínimo</th>
+                <th scope="col" class="text-end"><span class="visually-hidden">Acciones</span></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for bebida in bebidas %}
+            <tr>
+                <td>{{ bebida.nombre }}</td>
+                <td>{{ bebida.categoría }}</td>
+                <td class="text-end text-nowrap">{{ bebida.precio_venta }} €</td>
+                <td class="text-end">{{ bebida.stock_mínimo }}</td>
+                {% url 'bebida_editar' bebida.pk as editar %}
+                {% include "ambigu/acciones.html" with objeto=bebida editar=editar %}
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="text-body-secondary">Todavía no hay bebidas registradas.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{# Los diálogos van fuera de la tabla: dentro de una fila el navegador los sacaría de ahí. #}
+{% for bebida in bebidas %}
+{% url 'bebida_eliminar' bebida.pk as url %}
+{% include "ambigu/eliminar.html" with objeto=bebida url=url título='Eliminar bebida' %}
+{% endfor %}
+{% endblock content %}

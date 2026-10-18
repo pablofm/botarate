@@ -1,0 +1,21 @@
+{# Diálogo para confirmar el borrado de «objeto», que se envía por POST a «url». #}
+<div class="modal fade" id="eliminar-{{ objeto.pk }}" tabindex="-1" aria-labelledby="eliminar-{{ objeto.pk }}-título" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title h6" id="eliminar-{{ objeto.pk }}-título">{{ título }}</h3>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                ¿Seguro que quieres eliminar «{{ objeto }}»? No se puede deshacer.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-link" data-bs-dismiss="modal">Cancelar</button>
+                <form method="POST" action="{{ url }}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">{{ título }}</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

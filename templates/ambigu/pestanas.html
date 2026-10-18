@@ -1,0 +1,23 @@
+{# Las cuatro partes del ambigú; «actual» es el nombre de la URL del listado en el que se está. #}
+<ul class="nav nav-tabs mb-4">
+    <li class="nav-item">
+        <a class="nav-link{% if actual == 'bebidas' %} active{% endif %}"
+           {% if actual == 'bebidas' %}aria-current="page"{% endif %}
+           href="{% url 'bebidas' %}">Bebidas</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link{% if actual == 'categorias_bebida' %} active{% endif %}"
+           {% if actual == 'categorias_bebida' %}aria-current="page"{% endif %}
+           href="{% url 'categorias_bebida' %}">Categorías</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link{% if actual == 'stock_bebidas' %} active{% endif %}"
+           {% if actual == 'stock_bebidas' %}aria-current="page"{% endif %}
+           href="{% url 'stock_bebidas' %}">Compras</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link{% if actual == 'ventas_bebidas' %} active{% endif %}"
+           {% if actual == 'ventas_bebidas' %}aria-current="page"{% endif %}
+           href="{% url 'ventas_bebidas' %}">Ventas</a>
+    </li>
+</ul>

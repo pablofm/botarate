@@ -1,0 +1,10 @@
+{# Botones de editar y eliminar de una fila; el diálogo de eliminar va aparte, fuera de la tabla. #}
+<td class="text-end text-nowrap">
+    <a class="btn btn-sm btn-outline-secondary" href="{{ editar }}">Editar</a>
+    <button type="button"
+            class="btn btn-sm btn-outline-danger"
+            data-bs-toggle="modal"
+            data-bs-target="#eliminar-{{ objeto.pk }}">
+        Eliminar
+    </button>
+</td>
