@@ -81,22 +81,30 @@
     {% endfor %}
 </ul>
 
-<div class="card mb-4">
+<div class="card mb-4" id="suscribirse">
     <div class="card-body">
         <h2 class="h5 card-title">Suscríbete al calendario</h2>
         <p class="card-text">Añádelo a tu móvil o a tu calendario y los conciertos nuevos te aparecerán solos.</p>
         <div class="d-flex flex-wrap gap-2 mb-3">
-            <a class="btn btn-outline-primary" href="{{ url_webcal }}"><i class="bi bi-apple"></i> iPhone, Mac y otros</a>
+            <a class="btn btn-outline-primary" href="{{ url_webcal }}"><i class="bi bi-apple"></i> Apple Calendar</a>
             <a class="btn btn-outline-primary" href="{{ url_google }}" target="_blank" rel="noopener">
                 <i class="bi bi-google"></i> Google Calendar</a>
             <a class="btn btn-outline-primary" href="{{ url_outlook }}" target="_blank" rel="noopener">
                 <i class="bi bi-microsoft"></i> Outlook</a>
         </div>
-        <label class="form-label" for="url-calendario">O copia la dirección y pégala en tu aplicación de calendario:</label>
+        <label class="form-label" for="url-calendario">
+            ¿Usas otra aplicación? Copia esta dirección y añádela como calendario suscrito:</label>
         <div class="input-group">
             <input class="form-control" id="url-calendario" type="text" value="{{ url_ics }}" readonly>
             <button class="btn btn-outline-secondary" type="button" id="copiar-calendario">Copiar</button>
         </div>
+        {% if user.is_staff %}
+        {# Solo para quien gestiona la sala: es el enlace que va en carteles, redes o un QR. #}
+        <p class="small text-body-secondary mt-3 mb-0">
+            Enlace único para compartir, que lleva a cada dispositivo a su calendario:
+            <a href="{{ url_suscribirse }}">{{ url_suscribirse }}</a>
+        </p>
+        {% endif %}
     </div>
 </div>
 {% endblock content %}

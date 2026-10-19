@@ -261,3 +261,44 @@ class SubidaCartelTests(TestCase):
 
         self.assertEqual(respuesta.status_code, 200)
         self.assertFalse(Evento.objects.filter(título='Concierto').exists())
+
+
+class SuscribirseTests(TestCase):
+    """El enlace único: cada dispositivo acaba en su calendario, y si no se sabe cuál, elige."""
+
+    IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148'
+    MAC = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/18.0 Safari/605.1.15'
+    ANDROID = 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 Chrome/130.0 Mobile Safari/537.36'
+    WINDOWS = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130.0 Safari/537.36'
+
+    def suscribirse(self, navegador):
+        return self.client.get(reverse('calendario_suscribirse'), headers={'user-agent': navegador})
+
+    def test_iphone_y_mac_van_a_calendario_de_apple(self):
+        for navegador in (self.IPHONE, self.MAC):
+            with self.subTest(navegador=navegador):
+                respuesta = self.suscribirse(navegador)
+
+                self.assertEqual(respuesta.status_code, 302)
+                self.assertEqual(respuesta['Location'], 'webcal://testserver/calendario/botarate.ics')
+
+    def test_android_va_a_google_calendar(self):
+        respuesta = self.suscribirse(self.ANDROID)
+
+        self.assertEqual(respuesta.status_code, 302)
+        self.assertTrue(respuesta['Location'].startswith('https://calendar.google.com/calendar/render?cid=webcal'))
+
+    def test_en_un_ordenador_se_deja_elegir(self):
+        respuesta = self.suscribirse(self.WINDOWS)
+
+        self.assertRedirects(respuesta, reverse('calendario') + '#suscribirse')
+
+    def test_sin_navegador_conocido_también_se_deja_elegir(self):
+        self.assertRedirects(self.suscribirse(''), reverse('calendario') + '#suscribirse')
+
+    def test_el_enlace_único_solo_se_le_enseña_a_la_sala(self):
+        self.assertNotContains(self.client.get(reverse('calendario')), '/calendario/suscribirse/')
+
+        self.client.force_login(get_user_model().objects.create_user(
+            email='sala@botarate.es', password='x', is_staff=True, is_active=True))
+        self.assertContains(self.client.get(reverse('calendario')), 'http://testserver/calendario/suscribirse/')

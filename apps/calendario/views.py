@@ -5,7 +5,8 @@ from collections import defaultdict
 from urllib.parse import quote
 
 from django.contrib.auth.decorators import login_not_required
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, HttpResponseRedirect
+from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
@@ -21,6 +22,25 @@ DÍAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado',
 
 def _medianoche(día):
     return timezone.make_aware(datetime.datetime.combine(día, datetime.time.min))
+
+
+def enlaces_suscripción(request):
+    url = request.build_absolute_uri(reverse('calendario_ics'))
+    webcal = 'webcal://' + url.split('://', 1)[1]
+    return {
+        'url_ics': url,
+        'url_webcal': webcal,
+        'url_google': f'https://calendar.google.com/calendar/render?cid={quote(webcal, safe="")}',
+        'url_outlook': (
+            'https://outlook.live.com/calendar/0/addfromweb'
+            f'?url={quote(url, safe="")}&name={quote(NOMBRE_CALENDARIO)}'),
+        'url_suscribirse': request.build_absolute_uri(reverse('calendario_suscribirse')),
+    }
+
+
+class WebcalRedirect(HttpResponseRedirect):
+    # Django solo redirige a http, https y ftp si no se le dice otra cosa.
+    allowed_schemes = ['webcal']
 
 
 @method_decorator(login_not_required, name='dispatch')
@@ -61,20 +81,27 @@ class CalendarioView(TemplateView):
         context['eventos_mes'] = [
             evento for evento in eventos
             if evento.inicio < _medianoche(context['siguiente']) and evento.fin_aproximado > _medianoche(primer_día)]
-        context.update(self.enlaces_suscripción())
+        context.update(enlaces_suscripción(self.request))
         return context
 
-    def enlaces_suscripción(self):
-        url = self.request.build_absolute_uri(reverse('calendario_ics'))
-        webcal = 'webcal://' + url.split('://', 1)[1]
-        return {
-            'url_ics': url,
-            'url_webcal': webcal,
-            'url_google': f'https://calendar.google.com/calendar/render?cid={quote(webcal, safe="")}',
-            'url_outlook': (
-                'https://outlook.live.com/calendar/0/addfromweb'
-                f'?url={quote(url, safe="")}&name={quote(NOMBRE_CALENDARIO)}'),
-        }
+
+@method_decorator(login_not_required, name='dispatch')
+class SuscribirseView(View):
+    """Un único enlace para suscribirse (el de los carteles o un QR): cada dispositivo va a su calendario.
+
+    Por el dispositivo solo se puede adivinar el calendario en Apple y Android. En un ordenador con
+    Windows o Linux lo mismo se usa Google que Outlook, así que ahí se deja elegir.
+    """
+
+    def get(self, request):
+        enlaces = enlaces_suscripción(request)
+        navegador = request.headers.get('User-Agent', '')
+        # El iPad se presenta como un Mac, pero los dos van a Calendario de Apple igualmente.
+        if any(apple in navegador for apple in ('iPhone', 'iPad', 'Macintosh')):
+            return WebcalRedirect(enlaces['url_webcal'])
+        if 'Android' in navegador:
+            return redirect(enlaces['url_google'])
+        return redirect(reverse('calendario') + '#suscribirse')
 
 
 @method_decorator(login_not_required, name='dispatch')
