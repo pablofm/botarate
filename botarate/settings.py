@@ -12,7 +12,7 @@ SECRET_KEY = config('SECRET_KEY')
 DJANGO_CONFIGURATION = config('DJANGO_CONFIGURATION', default='DEV', cast=str)
 DEBUG = config('DEBUG', default=False, cast=bool)
 STATIC_ROOT = config('STATIC_ROOT', default=None)
-MEDIA_ROOT = config('MEDIA_ROOT', default=None)
+MEDIA_ROOT = config('MEDIA_ROOT', default=BASE_DIR / 'media')
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1", cast=Csv())
 CSRF_TRUSTED_ORIGINS = config("CSRF_TRUSTED_ORIGINS", default="http://localhost,http://127.0.0.1", cast=Csv())
 
@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'apps.pagos',
     'apps.socios',
     'apps.ambigu',
+    'apps.calendario',
     # External apps
     'localflavor',
     'bootstrap_datepicker_plus',
@@ -127,6 +128,7 @@ TIME_ZONE = 'Europe/Madrid'
 USE_I18N = True
 USE_TZ = True
 STATIC_URL = 'static/'
+MEDIA_URL = 'media/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

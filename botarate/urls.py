@@ -14,8 +14,12 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
+from django.contrib.auth.decorators import login_not_required
 from django.urls import include, path
+from django.views.static import serve
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -23,5 +27,10 @@ urlpatterns = [
     path('', include('apps.clases.urls')),
     path('', include('apps.pagos.urls')),
     path('', include('apps.ambigu.urls')),
+    path('', include('apps.calendario.urls')),
     path('', include('apps.accounts.urls')),
 ]
+
+# En producción los ficheros subidos los sirve el servidor web; aquí solo hace falta para desarrollo.
+# Van sin sesión porque los carteles se ven desde el calendario público y desde los suscritos.
+urlpatterns += static(settings.MEDIA_URL, view=login_not_required(serve), document_root=settings.MEDIA_ROOT)

@@ -17,6 +17,13 @@
                    {% if vista == 'clases' %}aria-current="page"{% endif %}
                    href="{% url 'clases' %}">Clases</a>
             </li>
+            <li class="nav-item">
+                {% if request.resolver_match.route|slice:':11' == 'calendario/' %}
+                <a class="nav-link active" aria-current="page" href="{% url 'calendario' %}">Calendario</a>
+                {% else %}
+                <a class="nav-link" href="{% url 'calendario' %}">Calendario</a>
+                {% endif %}
+            </li>
             {% if es_administración %}
             <li class="nav-item">
                 <a class="nav-link{% if vista == 'pagos' %} active{% endif %}"

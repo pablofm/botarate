@@ -10,3 +10,16 @@
     content: " *" / "";
     color: var(--bs-danger);
 }
+
+/* Rejilla del calendario: siete columnas iguales y altura suficiente para un par de eventos por día. */
+.calendario {
+    table-layout: fixed;
+}
+.calendario td {
+    height: 7rem;
+}
+/* El cartel se ve entero: img-fluid lo ajusta al ancho de su columna y, como suelen ser verticales,
+   se limita también el alto para que en el móvil no ocupe más de lo que cabe en pantalla. */
+.cartel {
+    max-height: 70vh;
+}

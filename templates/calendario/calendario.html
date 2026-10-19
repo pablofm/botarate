@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+
+{% block breadcrumb %}
+{% if user.is_authenticated %}<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Inicio</a></li>{% endif %}
+<li class="breadcrumb-item active" aria-current="page">Calendario</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+    <h1 class="h3 mb-0 text-capitalize">{{ mes|date:'F Y' }}</h1>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary" href="{% url 'calendario_mes' anterior.year anterior.month %}"
+           aria-label="Mes anterior"><i class="bi bi-chevron-left"></i></a>
+        <a class="btn btn-outline-secondary" href="{% url 'calendario' %}">Hoy</a>
+        <a class="btn btn-outline-secondary" href="{% url 'calendario_mes' siguiente.year siguiente.month %}"
+           aria-label="Mes siguiente"><i class="bi bi-chevron-right"></i></a>
+        {% if user.is_staff %}
+        <a class="btn btn-primary" href="{% url 'admin:calendario_evento_add' %}">Nuevo evento</a>
+        {% endif %}
+    </div>
+</div>
+
+{# En pantallas estrechas la rejilla no cabe: basta con la lista de debajo. #}
+<div class="table-responsive d-none d-md-block mb-4">
+    <table class="table table-bordered calendario">
+        <thead>
+            <tr>
+                {% for día in días_semana %}<th scope="col" class="text-center">{{ día }}</th>{% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for semana in semanas %}
+            <tr>
+                {% for día, eventos in semana %}
+                <td class="{% if día.month != mes.month %}text-body-tertiary bg-body-tertiary{% endif %}">
+                    <div class="text-end small{% if día == hoy %} fw-bold text-primary{% endif %}">
+                        {% if día == hoy %}<span class="visually-hidden">Hoy, </span>{% endif %}{{ día.day }}
+                    </div>
+                    {% for evento in eventos %}
+                    <a class="d-block small text-truncate text-decoration-none mb-1" href="#evento-{{ evento.pk }}"
+                       title="{{ evento.título }}">
+                        <span class="text-body-secondary">{{ evento.inicio|time:'H:i' }}</span> {{ evento.título }}
+                    </a>
+                    {% endfor %}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<h2 class="h5 mb-3">Programación de <span>{{ mes|date:'F' }}</span></h2>
+<ul class="list-group mb-4">
+    {% for evento in eventos_mes %}
+    <li class="list-group-item{% if evento.ya_pasó %} text-body-secondary{% endif %}" id="evento-{{ evento.pk }}">
+        {# En el móvil el cartel va arriba a todo lo ancho; a partir de sm, en su columna a la izquierda. #}
+        <div class="row g-3">
+            <div class="col-sm-4 col-lg-3 text-center">
+                <a href="{{ evento.url_cartel }}" target="_blank" rel="noopener">
+                    <img class="cartel img-fluid rounded" src="{{ evento.url_cartel }}" loading="lazy"
+                         alt="{% if evento.cartel %}Cartel de {{ evento.título }}{% else %}Cartel por definir{% endif %}">
+                </a>
+            </div>
+            <div class="col-sm-8 col-lg-9">
+                <div class="d-flex justify-content-between flex-wrap gap-2">
+                    <strong>{{ evento.título }}</strong>
+                    <span>{{ evento.inicio|date:'l j \d\e F, H:i' }} · duración aprox. {{ evento.duración_aproximada }}</span>
+                </div>
+                {% if evento.lugar %}<div class="small"><i class="bi bi-geo-alt"></i> {{ evento.lugar }}</div>{% endif %}
+                {% if evento.descripción %}<p class="mb-1 mt-2">{{ evento.descripción|linebreaksbr }}</p>{% endif %}
+                {% if evento.enlace %}<a href="{{ evento.enlace }}" rel="noopener">Entradas e información</a>{% endif %}
+                {% if user.is_staff %}
+                <a class="small ms-2" href="{% url 'admin:calendario_evento_change' evento.pk %}">Editar</a>
+                {% endif %}
+            </div>
+        </div>
+    </li>
+    {% empty %}
+    <li class="list-group-item text-body-secondary">No hay nada programado este mes.</li>
+    {% endfor %}
+</ul>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <h2 class="h5 card-title">Suscríbete al calendario</h2>
+        <p class="card-text">Añádelo a tu móvil o a tu calendario y los conciertos nuevos te aparecerán solos.</p>
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            <a class="btn btn-outline-primary" href="{{ url_webcal }}"><i class="bi bi-apple"></i> iPhone, Mac y otros</a>
+            <a class="btn btn-outline-primary" href="{{ url_google }}" target="_blank" rel="noopener">
+                <i class="bi bi-google"></i> Google Calendar</a>
+            <a class="btn btn-outline-primary" href="{{ url_outlook }}" target="_blank" rel="noopener">
+                <i class="bi bi-microsoft"></i> Outlook</a>
+        </div>
+        <label class="form-label" for="url-calendario">O copia la dirección y pégala en tu aplicación de calendario:</label>
+        <div class="input-group">
+            <input class="form-control" id="url-calendario" type="text" value="{{ url_ics }}" readonly>
+            <button class="btn btn-outline-secondary" type="button" id="copiar-calendario">Copiar</button>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block scripts %}
+<script>
+    const botónCopiar = document.getElementById('copiar-calendario');
+    botónCopiar.addEventListener('click', async () => {
+        const campo = document.getElementById('url-calendario');
+        try {
+            await navigator.clipboard.writeText(campo.value);
+        } catch {
+            // Sin acceso al portapapeles (por ejemplo, sin HTTPS): se deja seleccionada para copiarla a mano.
+            campo.select();
+            return;
+        }
+        botónCopiar.textContent = '¡Copiada!';
+    });
+</script>
+{% endblock scripts %}
