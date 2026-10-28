@@ -1,12 +1,40 @@
+import datetime
 from decimal import Decimal
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from apps.pagos.models import FORMAS_PAGO_PENDIENTES, FormaPago
+
+
+# Las de los pagos de clases, más la invitación/merma, que solo se da en la barra.
+FormaPagoVenta = models.TextChoices('FormaPagoVenta', [
+    *((forma.name, (forma.value, forma.label)) for forma in FormaPago),
+    ('INVITACIÓN', ('INVITACION', 'Invitación/Merma')),
+])
+
+
+# Las compras se apuntan desde este día; las ventas de antes salieron de bebida que
+# no está registrada, así que no se descuentan del stock.
+INICIO_STOCK = datetime.date(2026, 10, 23)
+
+
+class BebidaQuerySet(models.QuerySet):
+    def con_stock(self):
+        """Añade a cada bebida «stock_actual»: lo comprado menos lo vendido desde INICIO_STOCK."""
+        # Con subconsultas y no con dos Sum sobre joins, que multiplicarían una suma por la otra.
+        def unidades(queryset):
+            suma = queryset.filter(bebida=models.OuterRef('pk')).values('bebida').annotate(
+                total=models.Sum('cantidad')).values('total')
+            return Coalesce(models.Subquery(suma), 0)
+
+        return self.annotate(stock_actual=(
+            unidades(StockBebida.objects.all())
+            - unidades(VentaBebida.objects.filter(fecha__gte=INICIO_STOCK))))
 
 
 class CategoríaBebida(models.Model):
@@ -28,9 +56,11 @@ class Bebida(models.Model):
         'PVP (€)', max_digits=6, decimal_places=2, validators=[MinValueValidator(Decimal('0.01'))])
     stock_mínimo = models.PositiveIntegerField(default=0, help_text='Por debajo de estas unidades hay que reponer.')
 
+    objects = BebidaQuerySet.as_manager()
+
     @property
     def unidades_compradas(self):
-        """Todas las que han entrado; aún no se descuentan ventas ni mermas."""
+        """Todas las que han entrado, sin descontar ventas: para eso está con_stock()."""
         return self.entradas_stock.aggregate(total=models.Sum('cantidad'))['total'] or 0
 
     def __str__(self):
@@ -98,7 +128,7 @@ class VentaBebida(models.Model):
         Bebida, on_delete=models.PROTECT, related_name='ventas', verbose_name='bebida')
     fecha = models.DateField('fecha de venta', default=timezone.localdate)
     cantidad = models.PositiveIntegerField('unidades', validators=[MinValueValidator(1)])
-    forma_pago = models.CharField('forma de pago', max_length=13, choices=FormaPago, blank=True)
+    forma_pago = models.CharField('forma de pago', max_length=13, choices=FormaPagoVenta, blank=True)
     registrado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
@@ -108,14 +138,35 @@ class VentaBebida(models.Model):
     @property
     def importe(self):
         """El PVP de la bebida no cambia, así que el de ahora es el de la venta."""
+        # Una invitación o una merma sale gratis.
+        if self.forma_pago == FormaPagoVenta.INVITACIÓN:
+            return Decimal('0.00')
         return self.cantidad * self.bebida.precio_venta
+
+    def unidades_disponibles(self):
+        """Las que se pueden vender en esta venta: el stock, más lo que ya se llevaba ella."""
+        disponibles = Bebida.objects.con_stock().get(pk=self.bebida_id).stock_actual
+        if not self._state.adding:
+            anterior = VentaBebida.objects.get(pk=self.pk)
+            if anterior.bebida_id == self.bebida_id and anterior.fecha >= INICIO_STOCK:
+                disponibles += anterior.cantidad
+        return disponibles
 
     def clean(self):
         super().clean()
+        errores = {}
         # Las mismas formas de pago pendientes que en los pagos de clases.
         if self._state.adding and self.forma_pago in FORMAS_PAGO_PENDIENTES:
-            raise ValidationError(
-                {'forma_pago': f'{self.get_forma_pago_display()} está pendiente de activar.'})
+            errores['forma_pago'] = f'{self.get_forma_pago_display()} está pendiente de activar.'
+        # Las ventas de antes de INICIO_STOCK no cuentan para el stock, así que no se limitan.
+        if self.bebida_id and self.cantidad and self.fecha and self.fecha >= INICIO_STOCK:
+            disponibles = max(self.unidades_disponibles(), 0)
+            if self.cantidad > disponibles:
+                errores['cantidad'] = (
+                    f'No se puede vender más de lo comprado: de {self.bebida} '
+                    f'se pueden vender {disponibles} como mucho.')
+        if errores:
+            raise ValidationError(errores)
 
     def __str__(self):
         return f'{self.cantidad} × {self.bebida} ({self.fecha:%d/%m/%Y})'

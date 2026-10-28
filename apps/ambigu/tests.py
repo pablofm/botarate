@@ -10,7 +10,7 @@ from django.utils import timezone
 
 from apps.pagos.models import FormaPago
 
-from .models import Bebida, CategoríaBebida, StockBebida, VentaBebida
+from .models import INICIO_STOCK, Bebida, CategoríaBebida, FormaPagoVenta, StockBebida, VentaBebida
 
 
 class StockBebidaTests(TestCase):
@@ -43,6 +43,20 @@ class StockBebidaTests(TestCase):
         self.assertEqual(self.cerveza.unidades_compradas, 192)
         self.assertEqual(self.refresco.unidades_compradas, 6)
 
+    def test_el_stock_resta_las_ventas_desde_el_23_de_octubre(self):
+        self.comprar(self.cerveza, 48, '0.45')
+        self.comprar(self.cerveza, 24, '0.47')
+        VentaBebida.objects.filter(bebida=self.cerveza).delete()
+        for fecha, cantidad in ((datetime.date(2026, 10, 22), 100), (INICIO_STOCK, 5), (timezone.localdate(), 3)):
+            VentaBebida.objects.create(
+                bebida=self.cerveza, fecha=fecha, cantidad=cantidad,
+                forma_pago=FormaPago.EFECTIVO, registrado_por=self.usuario)
+
+        stock = dict(Bebida.objects.con_stock().values_list('nombre', 'stock_actual'))
+
+        self.assertEqual(stock['Cerveza con alcohol'], 64)
+        self.assertEqual(stock['Zumo de piña'], 0)
+
     def test_una_bebida_sin_compras_no_tiene_unidades(self):
         self.assertEqual(self.refresco.unidades_compradas, 0)
 
@@ -70,6 +84,33 @@ class VentaBebidaTests(TestCase):
     def test_no_admite_ventas_sin_unidades(self):
         with self.assertRaises(IntegrityError):
             self.vender(0)
+
+    def test_una_invitación_o_merma_no_cuesta_nada(self):
+        self.assertEqual(self.vender(3, FormaPagoVenta.INVITACIÓN).importe, Decimal('0.00'))
+
+    def test_no_admite_vender_más_de_lo_comprado(self):
+        StockBebida.objects.create(
+            bebida=self.cerveza, cantidad=5, precio_compra=Decimal('0.45'), registrado_por=self.usuario)
+        venta = self.vender(3)
+        venta.full_clean()
+
+        for cantidad in (6, 7):
+            with self.subTest(cantidad=cantidad):
+                # Al editarla cuentan también las 3 que ya se llevaba: llega hasta 5.
+                venta.cantidad = cantidad
+                with self.assertRaises(ValidationError) as error:
+                    venta.full_clean()
+                self.assertIn('se pueden vender 5 como mucho', error.exception.message_dict['cantidad'][0])
+        venta.cantidad = 5
+        venta.full_clean()
+
+        with self.assertRaises(ValidationError):
+            VentaBebida(bebida=self.cerveza, cantidad=3, forma_pago=FormaPago.EFECTIVO,
+                        registrado_por=self.usuario).full_clean()
+
+    def test_las_ventas_de_antes_del_stock_no_se_limitan(self):
+        VentaBebida(bebida=self.cerveza, cantidad=50, fecha=datetime.date(2026, 10, 22),
+                    forma_pago=FormaPago.EFECTIVO, registrado_por=self.usuario).full_clean()
 
     def test_no_admite_formas_de_pago_pendientes_de_activar(self):
         venta = VentaBebida(
@@ -108,6 +149,9 @@ class VistasAmbigúTests(TestCase):
                       'bebida_nueva', 'venta_bebida_nueva'):
             with self.subTest(vista=vista):
                 self.assertEqual(self.client.get(reverse(vista)).status_code, 403)
+
+    def test_la_portada_del_ambigú_abre_las_ventas(self):
+        self.assertRedirects(self.client.get('/ambigu/'), reverse('ventas_bebidas'))
 
     def test_los_listados_se_ven(self):
         StockBebida.objects.create(
@@ -193,6 +237,17 @@ class VistasAmbigúTests(TestCase):
         respuesta = self.client.post(reverse('venta_bebida_nueva'), self.datos_venta(forma_pago=''))
 
         self.assertFormError(respuesta.context['form'], 'forma_pago', 'Este campo es obligatorio.')
+
+    def test_registra_una_invitación_o_merma_gratis(self):
+        respuesta = self.client.post(
+            reverse('venta_bebida_nueva'), self.datos_venta(forma_pago=FormaPagoVenta.INVITACIÓN))
+
+        self.assertRedirects(respuesta, reverse('ventas_bebidas'))
+        venta = VentaBebida.objects.get(registrado_por=self.administrativo)
+        self.assertEqual(venta.importe, Decimal('0.00'))
+
+    def test_la_invitación_o_merma_no_es_una_forma_de_pago_de_clases(self):
+        self.assertNotIn('INVITACION', FormaPago.values)
 
     def test_una_venta_nueva_no_admite_bizum(self):
         respuesta = self.client.post(reverse('venta_bebida_nueva'), self.datos_venta(forma_pago=FormaPago.BIZUM))

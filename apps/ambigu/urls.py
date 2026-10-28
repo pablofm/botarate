@@ -1,9 +1,12 @@
 from django.urls import path
+from django.views.generic import RedirectView
 
 from . import views
 
 urlpatterns = [
-    path('ambigu/', views.BebidaListView.as_view(), name='bebidas'),
+    # La portada del ambigú es la primera pestaña, la de ventas.
+    path('ambigu/', RedirectView.as_view(pattern_name='ventas_bebidas'), name='ambigu'),
+    path('ambigu/bebidas/', views.BebidaListView.as_view(), name='bebidas'),
     path('ambigu/bebidas/nueva/', views.BebidaCreateView.as_view(), name='bebida_nueva'),
     path('ambigu/bebidas/<int:pk>/editar/', views.BebidaUpdateView.as_view(), name='bebida_editar'),
     path('ambigu/bebidas/<int:pk>/eliminar/', views.BebidaDeleteView.as_view(), name='bebida_eliminar'),

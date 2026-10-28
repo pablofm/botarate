@@ -20,7 +20,7 @@
                 <th scope="col">Bebida</th>
                 <th scope="col">Categoría</th>
                 <th scope="col" class="text-end">PVP</th>
-                <th scope="col" class="text-end text-nowrap">Stock mínimo</th>
+                <th scope="col" class="text-end text-nowrap">Stock actual</th>
                 <th scope="col" class="text-end"><span class="visually-hidden">Acciones</span></th>
             </tr>
         </thead>
@@ -30,7 +30,7 @@
                 <td>{{ bebida.nombre }}</td>
                 <td>{{ bebida.categoría }}</td>
                 <td class="text-end text-nowrap">{{ bebida.precio_venta }} €</td>
-                <td class="text-end">{{ bebida.stock_mínimo }}</td>
+                <td class="text-end">{{ bebida.stock_actual }}</td>
                 {% url 'bebida_editar' bebida.pk as editar %}
                 {% include "ambigu/acciones.html" with objeto=bebida editar=editar %}
             </tr>

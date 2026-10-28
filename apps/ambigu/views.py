@@ -71,7 +71,7 @@ class BebidaListView(SoloAdministraciónMixin, ListView):
     context_object_name = 'bebidas'
 
     def get_queryset(self):
-        return super().get_queryset().select_related('categoría')
+        return super().get_queryset().select_related('categoría').con_stock()
 
 
 class BebidaCreateView(FormularioMixin, CreateView):

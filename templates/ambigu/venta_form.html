@@ -4,7 +4,7 @@
 {% block antes_del_formulario %}
 <div class="mb-4 p-3 border rounded text-center">
     <div class="text-body-secondary">Importe de la venta</div>
-    <output id="importe-venta" class="d-block display-4 fw-semibold" for="id_bebida id_cantidad" aria-live="polite">—</output>
+    <output id="importe-venta" class="d-block display-4 fw-semibold" for="id_bebida id_cantidad id_forma_pago" aria-live="polite">—</output>
 </div>
 {% endblock antes_del_formulario %}
 
@@ -20,11 +20,13 @@
 
 {% block scripts %}
 <script>
-    // El importe se recalcula al elegir bebida o cambiar las unidades; el que vale
-    // es el que calcula el servidor al guardar, con el mismo PVP.
+    // El importe se recalcula al elegir bebida, cambiar las unidades o la forma de pago
+    // (una invitación o merma sale gratis); el que vale es el que calcula el servidor al
+    // guardar, con el mismo PVP.
     (function () {
         const bebida = document.getElementById('id_bebida');
         const cantidad = document.getElementById('id_cantidad');
+        const formaPago = document.getElementById('id_forma_pago');
         const importe = document.getElementById('importe-venta');
         const euros = new Intl.NumberFormat('es-ES', {style: 'currency', currency: 'EUR'});
 
@@ -32,11 +34,14 @@
         function actualizar() {
             const precio = parseFloat(bebida.selectedOptions[0]?.dataset.precio);
             const unidades = parseInt(cantidad.value, 10);
-            importe.textContent = precio && unidades > 0 ? euros.format(Math.round(precio * 100) * unidades / 100) : '—';
+            const gratis = formaPago.querySelector('input:checked')?.value === 'INVITACION';
+            importe.textContent = precio && unidades > 0
+                ? euros.format(gratis ? 0 : Math.round(precio * 100) * unidades / 100) : '—';
         }
 
         bebida.addEventListener('change', actualizar);
         cantidad.addEventListener('input', actualizar);
+        formaPago.addEventListener('change', actualizar);
         actualizar();
     })();
 </script>
