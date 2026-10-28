@@ -73,6 +73,13 @@ class BebidaListView(SoloAdministraciónMixin, ListView):
     def get_queryset(self):
         return super().get_queryset().select_related('categoría').con_stock()
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Las que han bajado del stock mínimo; si están justo en él aún no hace falta comprar.
+        context['por_reponer'] = [
+            bebida for bebida in context['bebidas'] if bebida.stock_actual < bebida.stock_mínimo]
+        return context
+
 
 class BebidaCreateView(FormularioMixin, CreateView):
     model = Bebida

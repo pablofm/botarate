@@ -153,6 +153,22 @@ class VistasAmbigúTests(TestCase):
     def test_la_portada_del_ambigú_abre_las_ventas(self):
         self.assertRedirects(self.client.get('/ambigu/'), reverse('ventas_bebidas'))
 
+    def test_avisa_de_las_bebidas_por_debajo_del_stock_mínimo(self):
+        Bebida.objects.update(stock_mínimo=0)
+        zumo = Bebida.objects.create(categoría=self.zumos, nombre='Zumo de piña', precio_venta=Decimal('2'),
+                                     stock_mínimo=6)
+        StockBebida.objects.create(
+            bebida=self.cerveza, cantidad=6, precio_compra=Decimal('0.45'), registrado_por=self.administrativo)
+        self.cerveza.stock_mínimo = 6
+        self.cerveza.save()
+
+        respuesta = self.client.get(reverse('bebidas'))
+
+        # La cerveza está justo en el mínimo, así que solo falta el zumo.
+        self.assertEqual(respuesta.context['por_reponer'], [zumo])
+        self.assertContains(respuesta, 'Hay que comprar <strong>Zumo de piña</strong>')
+        self.assertContains(respuesta, 'class="text-end text-danger fw-semibold">0</td>', count=1)
+
     def test_los_listados_se_ven(self):
         StockBebida.objects.create(
             bebida=self.cerveza, cantidad=48, precio_compra=Decimal('0.45'), registrado_por=self.administrativo)

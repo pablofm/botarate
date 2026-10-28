@@ -8,6 +8,17 @@
 {% block content %}
 {% include "ambigu/pestanas.html" with actual='bebidas' %}
 
+{% if por_reponer %}
+<div class="alert alert-danger" role="alert">
+    {% if por_reponer|length == 1 %}
+    Hay que comprar <strong>{{ por_reponer.0.nombre }}</strong>: está por debajo del stock mínimo.
+    {% else %}
+    Hay que comprar estas bebidas, que están por debajo del stock mínimo:
+    {% for bebida in por_reponer %}<strong>{{ bebida.nombre }}</strong>{% if not forloop.last %}, {% endif %}{% endfor %}.
+    {% endif %}
+</div>
+{% endif %}
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="h3 mb-0">Bebidas ({{ bebidas|length }})</h1>
     <a class="btn btn-primary" href="{% url 'bebida_nueva' %}">Registrar bebida</a>
@@ -30,7 +41,7 @@
                 <td>{{ bebida.nombre }}</td>
                 <td>{{ bebida.categoría }}</td>
                 <td class="text-end text-nowrap">{{ bebida.precio_venta }} €</td>
-                <td class="text-end">{{ bebida.stock_actual }}</td>
+                <td class="text-end{% if bebida.stock_actual < bebida.stock_mínimo %} text-danger fw-semibold{% endif %}">{{ bebida.stock_actual }}</td>
                 {% url 'bebida_editar' bebida.pk as editar %}
                 {% include "ambigu/acciones.html" with objeto=bebida editar=editar %}
             </tr>
