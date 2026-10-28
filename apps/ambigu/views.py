@@ -1,6 +1,6 @@
 from django.contrib import messages
 from django.contrib.messages.views import SuccessMessageMixin
-from django.db.models import ProtectedError
+from django.db.models import F, ProtectedError
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
@@ -11,7 +11,17 @@ from .forms import BebidaForm, CategoríaBebidaForm, StockBebidaForm, VentaBebid
 from .models import Bebida, CategoríaBebida, StockBebida, VentaBebida
 
 
-class FormularioMixin(SoloAdministraciónMixin, SuccessMessageMixin):
+class AmbigúMixin(SoloAdministraciónMixin):
+    """Todas las páginas del ambigú avisan de las bebidas que hay que comprar."""
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Si están justo en el stock mínimo aún no hace falta comprar.
+        context['por_reponer'] = Bebida.objects.con_stock().filter(stock_actual__lt=F('stock_mínimo'))
+        return context
+
+
+class FormularioMixin(AmbigúMixin, SuccessMessageMixin):
     """Alta y edición comparten plantilla: cambian el título y el botón."""
 
     template_name = 'ambigu/form.html'
@@ -63,7 +73,7 @@ class EliminarMixin(SoloAdministraciónMixin):
         return respuesta
 
 
-class BebidaListView(SoloAdministraciónMixin, ListView):
+class BebidaListView(AmbigúMixin, ListView):
     """La carta del ambigú."""
 
     model = Bebida
@@ -72,13 +82,6 @@ class BebidaListView(SoloAdministraciónMixin, ListView):
 
     def get_queryset(self):
         return super().get_queryset().select_related('categoría').con_stock()
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        # Las que han bajado del stock mínimo; si están justo en él aún no hace falta comprar.
-        context['por_reponer'] = [
-            bebida for bebida in context['bebidas'] if bebida.stock_actual < bebida.stock_mínimo]
-        return context
 
 
 class BebidaCreateView(FormularioMixin, CreateView):
@@ -102,7 +105,7 @@ class BebidaDeleteView(EliminarMixin, DeleteView):
     en_uso = 'tiene compras o ventas registradas'
 
 
-class CategoríaBebidaListView(SoloAdministraciónMixin, ListView):
+class CategoríaBebidaListView(AmbigúMixin, ListView):
     model = CategoríaBebida
     template_name = 'ambigu/categoria_list.html'
     context_object_name = 'categorías'
@@ -132,7 +135,7 @@ class CategoríaBebidaDeleteView(EliminarMixin, DeleteView):
     en_uso = 'todavía tiene bebidas'
 
 
-class StockBebidaListView(SoloAdministraciónMixin, ListView):
+class StockBebidaListView(AmbigúMixin, ListView):
     """Las compras de bebida, de la más reciente a la más antigua."""
 
     model = StockBebida
@@ -163,7 +166,7 @@ class StockBebidaDeleteView(EliminarMixin, DeleteView):
     sección = 'stock_bebidas'
 
 
-class VentaBebidaListView(SoloAdministraciónMixin, ListView):
+class VentaBebidaListView(AmbigúMixin, ListView):
     """Las ventas en barra, de la más reciente a la más antigua."""
 
     model = VentaBebida

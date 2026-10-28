@@ -165,9 +165,13 @@ class VistasAmbigúTests(TestCase):
         respuesta = self.client.get(reverse('bebidas'))
 
         # La cerveza está justo en el mínimo, así que solo falta el zumo.
-        self.assertEqual(respuesta.context['por_reponer'], [zumo])
-        self.assertContains(respuesta, 'Hay que comprar <strong>Zumo de piña</strong>')
+        self.assertQuerySetEqual(respuesta.context['por_reponer'], [zumo])
         self.assertContains(respuesta, 'class="text-end text-danger fw-semibold">0</td>', count=1)
+        for vista in ('bebidas', 'categorias_bebida', 'stock_bebidas', 'ventas_bebidas', 'venta_bebida_nueva'):
+            with self.subTest(vista=vista):
+                html = self.client.get(reverse(vista)).content.decode()
+                self.assertIn('Hay que comprar esta bebida', html)
+                self.assertRegex(html, r'(?s)<td[^>]*>Zumo de piña</td>\s*<td[^>]*>0</td>\s*<td[^>]*>6</td>')
 
     def test_los_listados_se_ven(self):
         StockBebida.objects.create(

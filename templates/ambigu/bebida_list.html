@@ -6,18 +6,8 @@
 {% endblock breadcrumb %}
 
 {% block content %}
+{% include "ambigu/aviso_stock.html" %}
 {% include "ambigu/pestanas.html" with actual='bebidas' %}
-
-{% if por_reponer %}
-<div class="alert alert-danger" role="alert">
-    {% if por_reponer|length == 1 %}
-    Hay que comprar <strong>{{ por_reponer.0.nombre }}</strong>: está por debajo del stock mínimo.
-    {% else %}
-    Hay que comprar estas bebidas, que están por debajo del stock mínimo:
-    {% for bebida in por_reponer %}<strong>{{ bebida.nombre }}</strong>{% if not forloop.last %}, {% endif %}{% endfor %}.
-    {% endif %}
-</div>
-{% endif %}
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="h3 mb-0">Bebidas ({{ bebidas|length }})</h1>
