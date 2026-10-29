@@ -10,6 +10,10 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
+    # Es la misma migración que se aplicó cuando la app se llamaba «ambigu»: donde ya
+    # esté aplicada, Django la da por hecha y no vuelve a crear ni cargar nada.
+    replaces = [('ambigu', '0001_initial')]
+
     initial = True
 
     dependencies = [
@@ -36,7 +40,7 @@ class Migration(migrations.Migration):
                 ('nombre', models.CharField(max_length=100, unique=True, verbose_name='nombre')),
                 ('precio_venta', models.DecimalField(decimal_places=2, max_digits=6, validators=[django.core.validators.MinValueValidator(Decimal('0.01'))], verbose_name='PVP (€)')),
                 ('stock_mínimo', models.PositiveIntegerField(default=0, help_text='Por debajo de estas unidades hay que reponer.')),
-                ('categoría', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='bebidas', to='ambigu.categoríabebida')),
+                ('categoría', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='bebidas', to='ventas.categoríabebida')),
             ],
             options={
                 'verbose_name': 'Bebida',
@@ -51,7 +55,7 @@ class Migration(migrations.Migration):
                 ('fecha', models.DateField(default=django.utils.timezone.localdate, verbose_name='fecha de compra')),
                 ('cantidad', models.PositiveIntegerField(validators=[django.core.validators.MinValueValidator(1)], verbose_name='unidades')),
                 ('precio_compra', models.DecimalField(decimal_places=2, help_text='Lo que cuesta cada unidad, IVA incluido.', max_digits=6, validators=[django.core.validators.MinValueValidator(Decimal('0.01'))], verbose_name='precio de compra por unidad (€)')),
-                ('bebida', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='entradas_stock', to='ambigu.bebida', verbose_name='bebida')),
+                ('bebida', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='entradas_stock', to='ventas.bebida', verbose_name='bebida')),
                 ('registrado_por', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='entradas_stock_registradas', to=settings.AUTH_USER_MODEL, verbose_name='registrado por')),
             ],
             options={
@@ -67,7 +71,7 @@ class Migration(migrations.Migration):
                 ('fecha', models.DateField(default=django.utils.timezone.localdate, verbose_name='fecha de venta')),
                 ('cantidad', models.PositiveIntegerField(validators=[django.core.validators.MinValueValidator(1)], verbose_name='unidades')),
                 ('forma_pago', models.CharField(blank=True, choices=[('TRANSFERENCIA', 'Transferencia bancaria'), ('EFECTIVO', 'Efectivo'), ('BIZUM', 'Bizum'), ('DATAFONO', 'Datáfono')], max_length=13, verbose_name='forma de pago')),
-                ('bebida', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='ventas', to='ambigu.bebida', verbose_name='bebida')),
+                ('bebida', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='ventas', to='ventas.bebida', verbose_name='bebida')),
                 ('registrado_por', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='ventas_registradas', to=settings.AUTH_USER_MODEL, verbose_name='registrado por')),
             ],
             options={

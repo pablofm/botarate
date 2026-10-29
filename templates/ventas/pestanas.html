@@ -1,0 +1,12 @@
+{# Las pestañas del apartado en el que se está; a cada apartado se llega desde el menú de Ventas. #}
+<ul class="nav nav-tabs mb-4">
+    {% if producto == 'camiseta' %}
+    {% include "ventas/pestana.html" with vista='ventas_camisetas' nombre='Ventas' %}
+    {% include "ventas/pestana.html" with vista='stock_camisetas' nombre='Compras' %}
+    {% include "ventas/pestana.html" with vista='camisetas' nombre='Camisetas' %}
+    {% else %}
+    {% include "ventas/pestana.html" with vista='ventas_bebidas' nombre='Ventas' %}
+    {% include "ventas/pestana.html" with vista='stock_bebidas' nombre='Compras' %}
+    {% include "ventas/pestana.html" with vista='bebidas' nombre='Bebidas' %}
+    {% endif %}
+</ul>

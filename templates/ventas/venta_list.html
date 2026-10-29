@@ -7,8 +7,8 @@
 {% endblock breadcrumb %}
 
 {% block content %}
-{% include "ambigu/aviso_stock.html" %}
-{% include "ambigu/pestanas.html" with actual='ventas_bebidas' %}
+{% include "ventas/aviso_stock.html" %}
+{% include "ventas/pestanas.html" with actual='ventas_bebidas' %}
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="h3 mb-0">Ventas ({{ ventas|length }})</h1>
@@ -38,7 +38,7 @@
                 <td>{{ venta.get_forma_pago_display|default:'—' }}</td>
                 <td>{{ venta.registrado_por }}</td>
                 {% url 'venta_bebida_editar' venta.pk as editar %}
-                {% include "ambigu/acciones.html" with objeto=venta editar=editar %}
+                {% include "ventas/acciones.html" with objeto=venta editar=editar %}
             </tr>
             {% empty %}
             <tr>
@@ -61,6 +61,6 @@
 {# Los diálogos van fuera de la tabla: dentro de una fila el navegador los sacaría de ahí. #}
 {% for venta in ventas %}
 {% url 'venta_bebida_eliminar' venta.pk as url %}
-{% include "ambigu/eliminar.html" with objeto=venta url=url título='Eliminar venta' %}
+{% include "ventas/eliminar.html" with objeto=venta url=url título='Eliminar venta' %}
 {% endfor %}
 {% endblock content %}

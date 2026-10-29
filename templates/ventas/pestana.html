@@ -1,0 +1,5 @@
+<li class="nav-item">
+    <a class="nav-link{% if actual == vista %} active{% endif %}"
+       {% if actual == vista %}aria-current="page"{% endif %}
+       href="{% url vista %}">{{ nombre }}</a>
+</li>

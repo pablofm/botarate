@@ -3,12 +3,12 @@
 
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Inicio</a></li>
-<li class="breadcrumb-item"><a href="{% url 'ventas_bebidas' %}">Ambigú</a></li>
+<li class="breadcrumb-item"><a href="{% url portada %}">{{ apartado }}</a></li>
 <li class="breadcrumb-item active" aria-current="page">{{ título }}</li>
 {% endblock breadcrumb %}
 
 {% block content %}
-{% include "ambigu/aviso_stock.html" %}
+{% include "ventas/aviso_stock.html" %}
 <h1 class="h3 mb-4">{{ título }}</h1>
 
 <div class="row">

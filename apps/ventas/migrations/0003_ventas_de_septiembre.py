@@ -69,8 +69,8 @@ def septiembre(día):
 
 def crear_ventas(apps, schema_editor):
     Usuario = apps.get_model('accounts', 'BotarateUser')
-    Bebida = apps.get_model('ambigu', 'Bebida')
-    VentaBebida = apps.get_model('ambigu', 'VentaBebida')
+    Bebida = apps.get_model('ventas', 'Bebida')
+    VentaBebida = apps.get_model('ventas', 'VentaBebida')
 
     nombre, email = VIRGINIA
     # Si aún no existe, sin contraseña utilizable y sin activar, como los profesores.
@@ -93,7 +93,7 @@ def crear_ventas(apps, schema_editor):
 
 
 def borrar_ventas(apps, schema_editor):
-    VentaBebida = apps.get_model('ambigu', 'VentaBebida')
+    VentaBebida = apps.get_model('ventas', 'VentaBebida')
 
     VentaBebida.objects.filter(
         registrado_por__email=VIRGINIA[1],
@@ -102,9 +102,13 @@ def borrar_ventas(apps, schema_editor):
 
 class Migration(migrations.Migration):
 
+    # Es la misma migración que se aplicó cuando la app se llamaba «ambigu»: donde ya
+    # esté aplicada, Django la da por hecha y no vuelve a crear ni cargar nada.
+    replaces = [('ambigu', '0003_ventas_de_septiembre')]
+
     dependencies = [
         ('accounts', '0001_initial'),
-        ('ambigu', '0002_bebidas'),
+        ('ventas', '0002_bebidas'),
     ]
 
     operations = [

@@ -32,7 +32,7 @@ INSTALLED_APPS = [
     'apps.clases',
     'apps.pagos',
     'apps.socios',
-    'apps.ambigu',
+    'apps.ventas',
     'apps.calendario',
     # External apps
     'localflavor',

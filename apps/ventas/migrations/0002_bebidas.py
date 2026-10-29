@@ -25,8 +25,8 @@ BEBIDAS = [
 
 
 def crear_bebidas(apps, schema_editor):
-    CategoríaBebida = apps.get_model('ambigu', 'CategoríaBebida')
-    Bebida = apps.get_model('ambigu', 'Bebida')
+    CategoríaBebida = apps.get_model('ventas', 'CategoríaBebida')
+    Bebida = apps.get_model('ventas', 'Bebida')
 
     for nombre, categoría, precio_venta, stock_mínimo in BEBIDAS:
         categoría, _ = CategoríaBebida.objects.get_or_create(nombre=categoría)
@@ -40,8 +40,8 @@ def crear_bebidas(apps, schema_editor):
 
 
 def borrar_bebidas(apps, schema_editor):
-    CategoríaBebida = apps.get_model('ambigu', 'CategoríaBebida')
-    Bebida = apps.get_model('ambigu', 'Bebida')
+    CategoríaBebida = apps.get_model('ventas', 'CategoríaBebida')
+    Bebida = apps.get_model('ventas', 'Bebida')
 
     Bebida.objects.filter(nombre__in=[nombre for nombre, *_ in BEBIDAS]).delete()
     # Las categorías solo si se han quedado vacías: alguien puede haberles colgado otras bebidas.
@@ -51,8 +51,12 @@ def borrar_bebidas(apps, schema_editor):
 
 class Migration(migrations.Migration):
 
+    # Es la misma migración que se aplicó cuando la app se llamaba «ambigu»: donde ya
+    # esté aplicada, Django la da por hecha y no vuelve a crear ni cargar nada.
+    replaces = [('ambigu', '0002_bebidas')]
+
     dependencies = [
-        ('ambigu', '0001_initial'),
+        ('ventas', '0001_initial'),
     ]
 
     operations = [

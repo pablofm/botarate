@@ -10,7 +10,9 @@ from django.utils import timezone
 
 from apps.pagos.models import FormaPago
 
-from .models import INICIO_STOCK, Bebida, CategoríaBebida, FormaPagoVenta, StockBebida, VentaBebida
+from .models import (
+    INICIO_STOCK, Bebida, Camiseta, CategoríaBebida, Corte, FormaPagoVenta, StockBebida, StockCamiseta, Talla,
+    VentaBebida, VentaCamiseta)
 
 
 class StockBebidaTests(TestCase):
@@ -150,8 +152,8 @@ class VistasAmbigúTests(TestCase):
             with self.subTest(vista=vista):
                 self.assertEqual(self.client.get(reverse(vista)).status_code, 403)
 
-    def test_la_portada_del_ambigú_abre_las_ventas(self):
-        self.assertRedirects(self.client.get('/ambigu/'), reverse('ventas_bebidas'))
+    def test_la_portada_de_ventas_abre_las_del_ambigú(self):
+        self.assertRedirects(self.client.get('/ventas/'), reverse('ventas_bebidas'))
 
     def test_avisa_de_las_bebidas_por_debajo_del_stock_mínimo(self):
         Bebida.objects.update(stock_mínimo=0)
@@ -308,3 +310,183 @@ class VistasAmbigúTests(TestCase):
 
     def test_el_listado_de_ventas_suma_el_total(self):
         self.assertContains(self.client.get(reverse('ventas_bebidas')), '132,00 €')
+
+
+class AppRenombradaTests(TestCase):
+    def test_las_tablas_y_los_content_types_son_de_ventas(self):
+        from django.contrib.contenttypes.models import ContentType
+        from django.db import connection
+
+        tablas = connection.introspection.table_names()
+        self.assertIn('ventas_bebida', tablas)
+        self.assertFalse([tabla for tabla in tablas if tabla.startswith('ambigu_')])
+        self.assertFalse(ContentType.objects.filter(app_label='ambigu').exists())
+
+
+class CamisetasDeBotarateTests(TestCase):
+    def test_la_data_migration_da_de_alta_las_camisetas_y_su_primera_compra(self):
+        camisetas = Camiseta.objects.con_stock()
+        stock = {(camiseta.corte, camiseta.talla): camiseta.stock_actual for camiseta in camisetas}
+
+        self.assertEqual(len(stock), 12)
+        self.assertEqual(sum(stock.values()), 24)
+        self.assertEqual(stock['MUJER', 'M'], 5)
+        self.assertEqual(stock['HOMBRE', 'XXL'], 1)
+        self.assertEqual(stock['HOMBRE', 'XS'], 0)
+        self.assertEqual(
+            set(camisetas.values_list('precio_compra', 'precio_venta')), {(Decimal('7.25'), Decimal('12'))})
+        self.assertEqual(
+            set(StockCamiseta.objects.values_list('fecha', 'registrado_por__email')),
+            {(datetime.date(2026, 9, 8), 'pablofm@mailbox.org')})
+
+
+class CamisetaTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        # Sin las camisetas de la data migration, para que cada test cuente solo las suyas.
+        StockCamiseta.objects.all().delete()
+        Camiseta.objects.all().delete()
+        cls.usuario = get_user_model().objects.create_user(email='barra@botarate.es', password='x')
+        cls.camiseta = Camiseta.objects.create(
+            corte=Corte.MUJER, talla=Talla.M, precio_compra=Decimal('6.50'), precio_venta=Decimal('15'))
+
+    def comprar(self, cantidad, camiseta=None):
+        return StockCamiseta.objects.create(
+            camiseta=camiseta or self.camiseta, cantidad=cantidad, registrado_por=self.usuario)
+
+    def vender(self, cantidad, forma_pago=FormaPago.EFECTIVO):
+        return VentaCamiseta.objects.create(
+            camiseta=self.camiseta, cantidad=cantidad, forma_pago=forma_pago, registrado_por=self.usuario)
+
+    def test_se_ordenan_por_corte_y_de_la_talla_más_pequeña_a_la_más_grande(self):
+        for talla in (Talla.XXL, Talla.S, Talla.XL, Talla.XS, Talla.L):
+            Camiseta.objects.create(corte=Corte.MUJER, talla=talla, precio_compra=1, precio_venta=2)
+        Camiseta.objects.create(corte=Corte.HOMBRE, talla=Talla.XXL, precio_compra=1, precio_venta=2)
+
+        self.assertEqual(
+            [(camiseta.corte, camiseta.talla) for camiseta in Camiseta.objects.all()],
+            [('HOMBRE', 'XXL'), *(('MUJER', talla) for talla in ('XS', 'S', 'M', 'L', 'XL', 'XXL'))])
+
+    def test_no_admite_dos_camisetas_del_mismo_corte_y_talla(self):
+        with self.assertRaises(IntegrityError):
+            Camiseta.objects.create(corte=Corte.MUJER, talla=Talla.M, precio_compra=1, precio_venta=2)
+
+    def test_el_stock_resta_lo_vendido_de_lo_comprado(self):
+        self.comprar(10)
+        self.comprar(5)
+        self.vender(3)
+        self.vender(1, FormaPagoVenta.INVITACIÓN)
+
+        self.assertEqual(Camiseta.objects.con_stock().get(pk=self.camiseta.pk).stock_actual, 11)
+
+    def test_el_coste_y_el_importe_salen_de_los_precios_de_la_camiseta(self):
+        self.assertEqual(self.comprar(10).coste_total, Decimal('65.00'))
+        self.assertEqual(self.vender(2).importe, Decimal('30.00'))
+        self.assertEqual(self.vender(2, FormaPagoVenta.INVITACIÓN).importe, Decimal('0.00'))
+        self.assertEqual(self.camiseta.margen_unitario, Decimal('8.50'))
+
+    def test_no_admite_vender_más_de_lo_comprado(self):
+        self.comprar(5)
+        venta = self.vender(3)
+        venta.cantidad = 6
+        with self.assertRaises(ValidationError) as error:
+            venta.full_clean()
+        self.assertIn('se pueden vender 5 como mucho', error.exception.message_dict['cantidad'][0])
+        venta.cantidad = 5
+        venta.full_clean()
+
+    def test_una_venta_necesita_forma_de_pago(self):
+        self.comprar(5)
+        venta = VentaCamiseta(camiseta=self.camiseta, cantidad=1, registrado_por=self.usuario)
+
+        with self.assertRaises(ValidationError) as error:
+            venta.full_clean()
+        self.assertIn('forma_pago', error.exception.message_dict)
+
+
+class VistasCamisetasTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        # Sin las camisetas de la data migration, para que cada test cuente solo las suyas.
+        StockCamiseta.objects.all().delete()
+        Camiseta.objects.all().delete()
+        User = get_user_model()
+        cls.administrativo = User.objects.create_user(
+            email='admin@botarate.es', password='x', is_active=True, is_staff=True)
+        cls.profesor = User.objects.create_user(email='profe@botarate.es', password='x', is_active=True)
+        cls.camiseta = Camiseta.objects.create(
+            corte=Corte.HOMBRE, talla=Talla.XL, precio_compra=Decimal('6.50'), precio_venta=Decimal('15'),
+            stock_mínimo=3)
+
+    def setUp(self):
+        self.client.force_login(self.administrativo)
+
+    def test_el_profesorado_no_entra_en_las_camisetas(self):
+        self.client.force_login(self.profesor)
+        for vista in ('camisetas', 'stock_camisetas', 'ventas_camisetas', 'stock_camiseta_nuevo',
+                      'venta_camiseta_nueva'):
+            with self.subTest(vista=vista):
+                self.assertEqual(self.client.get(reverse(vista)).status_code, 403)
+
+    def test_las_páginas_se_ven_y_avisan_del_stock_mínimo(self):
+        compra = StockCamiseta.objects.create(camiseta=self.camiseta, cantidad=2, registrado_por=self.administrativo)
+        venta = VentaCamiseta.objects.create(
+            camiseta=self.camiseta, cantidad=1, forma_pago=FormaPago.EFECTIVO, registrado_por=self.administrativo)
+        urls = [reverse(vista) for vista in (
+            'camisetas', 'stock_camisetas', 'ventas_camisetas', 'stock_camiseta_nuevo', 'venta_camiseta_nueva')]
+        urls += [reverse('stock_camiseta_editar', args=[compra.pk]),
+                 reverse('venta_camiseta_editar', args=[venta.pk])]
+        for url in urls:
+            with self.subTest(url=url):
+                respuesta = self.client.get(url)
+                self.assertContains(respuesta, 'Hay que comprar esta camiseta')
+                self.assertContains(respuesta, 'Camiseta de hombre, talla XL')
+
+    def test_el_menú_de_ventas_lleva_al_ambigú_y_a_las_camisetas(self):
+        for vista, activa, inactiva in (('ventas_bebidas', 'Ambigú', 'Camisetas'),
+                                        ('stock_camisetas', 'Camisetas', 'Ambigú')):
+            with self.subTest(vista=vista):
+                html = self.client.get(reverse(vista)).content.decode()
+                self.assertIn('data-bs-toggle="dropdown"', html)
+                self.assertRegex(html, rf'class="dropdown-item active"\s*aria-current="page"\s*href="[^"]+">{activa}<')
+                self.assertRegex(html, rf'class="dropdown-item"\s*href="[^"]+">{inactiva}<')
+
+    def test_las_bebidas_no_avisan_de_las_camisetas(self):
+        Bebida.objects.update(stock_mínimo=0)
+
+        self.assertNotContains(self.client.get(reverse('ventas_bebidas')), 'Hay que comprar')
+
+    def test_registra_una_compra_y_una_venta(self):
+        respuesta = self.client.post(reverse('stock_camiseta_nuevo'), {
+            'camiseta': self.camiseta.pk, 'fecha': '2026-10-29', 'cantidad': 10})
+        self.assertRedirects(respuesta, reverse('stock_camisetas'))
+
+        respuesta = self.client.post(reverse('venta_camiseta_nueva'), {
+            'camiseta': self.camiseta.pk, 'fecha': '2026-10-29', 'cantidad': 2, 'forma_pago': FormaPago.EFECTIVO})
+        self.assertRedirects(respuesta, reverse('ventas_camisetas'))
+        venta = VentaCamiseta.objects.get()
+        self.assertEqual((venta.importe, venta.registrado_por), (Decimal('30.00'), self.administrativo))
+        self.assertContains(self.client.get(reverse('camisetas')), '>8</td>')
+
+    def test_no_vende_más_camisetas_de_las_que_hay(self):
+        respuesta = self.client.post(reverse('venta_camiseta_nueva'), {
+            'camiseta': self.camiseta.pk, 'fecha': '2026-10-29', 'cantidad': 1, 'forma_pago': FormaPago.EFECTIVO})
+
+        self.assertContains(respuesta, 'se pueden vender 0 como mucho')
+
+    def test_el_formulario_de_venta_lleva_el_pvp_para_calcular_el_importe(self):
+        respuesta = self.client.get(reverse('venta_camiseta_nueva'))
+
+        self.assertContains(respuesta, f'value="{self.camiseta.pk}" data-precio="15.00"')
+        self.assertContains(respuesta, "getElementById('id_camiseta')")
+        self.assertNotContains(respuesta, '---------')
+
+    def test_borra_una_venta(self):
+        StockCamiseta.objects.create(camiseta=self.camiseta, cantidad=2, registrado_por=self.administrativo)
+        venta = VentaCamiseta.objects.create(
+            camiseta=self.camiseta, cantidad=1, forma_pago=FormaPago.EFECTIVO, registrado_por=self.administrativo)
+
+        respuesta = self.client.post(reverse('venta_camiseta_eliminar', args=[venta.pk]))
+
+        self.assertRedirects(respuesta, reverse('ventas_camisetas'))
+        self.assertFalse(VentaCamiseta.objects.exists())

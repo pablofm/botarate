@@ -1,0 +1,44 @@
+from django.urls import path
+from django.views.generic import RedirectView
+
+from . import views
+
+urlpatterns = [
+    # La portada de ventas es la del ambigú, y la de cada apartado, sus ventas.
+    path('ventas/', RedirectView.as_view(pattern_name='ventas_bebidas'), name='ventas'),
+    path('ventas/ambigu/', views.VentaBebidaListView.as_view(), name='ventas_bebidas'),
+    path('ventas/ambigu/nueva/', views.VentaBebidaCreateView.as_view(), name='venta_bebida_nueva'),
+    path('ventas/ambigu/<int:pk>/editar/', views.VentaBebidaUpdateView.as_view(), name='venta_bebida_editar'),
+    path('ventas/ambigu/<int:pk>/eliminar/', views.VentaBebidaDeleteView.as_view(),
+         name='venta_bebida_eliminar'),
+    path('ventas/ambigu/bebidas/', views.BebidaListView.as_view(), name='bebidas'),
+    path('ventas/ambigu/bebidas/nueva/', views.BebidaCreateView.as_view(), name='bebida_nueva'),
+    path('ventas/ambigu/bebidas/<int:pk>/editar/', views.BebidaUpdateView.as_view(), name='bebida_editar'),
+    path('ventas/ambigu/bebidas/<int:pk>/eliminar/', views.BebidaDeleteView.as_view(), name='bebida_eliminar'),
+    path('ventas/ambigu/categorias/', views.CategoríaBebidaListView.as_view(), name='categorias_bebida'),
+    path('ventas/ambigu/categorias/nueva/', views.CategoríaBebidaCreateView.as_view(),
+         name='categoria_bebida_nueva'),
+    path('ventas/ambigu/categorias/<int:pk>/editar/', views.CategoríaBebidaUpdateView.as_view(),
+         name='categoria_bebida_editar'),
+    path('ventas/ambigu/categorias/<int:pk>/eliminar/', views.CategoríaBebidaDeleteView.as_view(),
+         name='categoria_bebida_eliminar'),
+    path('ventas/ambigu/stock/', views.StockBebidaListView.as_view(), name='stock_bebidas'),
+    path('ventas/ambigu/stock/nuevo/', views.StockBebidaCreateView.as_view(), name='stock_bebida_nuevo'),
+    path('ventas/ambigu/stock/<int:pk>/editar/', views.StockBebidaUpdateView.as_view(),
+         name='stock_bebida_editar'),
+    path('ventas/ambigu/stock/<int:pk>/eliminar/', views.StockBebidaDeleteView.as_view(),
+         name='stock_bebida_eliminar'),
+    path('ventas/camisetas/', views.VentaCamisetaListView.as_view(), name='ventas_camisetas'),
+    path('ventas/camisetas/nueva/', views.VentaCamisetaCreateView.as_view(), name='venta_camiseta_nueva'),
+    path('ventas/camisetas/<int:pk>/editar/', views.VentaCamisetaUpdateView.as_view(),
+         name='venta_camiseta_editar'),
+    path('ventas/camisetas/<int:pk>/eliminar/', views.VentaCamisetaDeleteView.as_view(),
+         name='venta_camiseta_eliminar'),
+    path('ventas/camisetas/tallas/', views.CamisetaListView.as_view(), name='camisetas'),
+    path('ventas/camisetas/stock/', views.StockCamisetaListView.as_view(), name='stock_camisetas'),
+    path('ventas/camisetas/stock/nuevo/', views.StockCamisetaCreateView.as_view(), name='stock_camiseta_nuevo'),
+    path('ventas/camisetas/stock/<int:pk>/editar/', views.StockCamisetaUpdateView.as_view(),
+         name='stock_camiseta_editar'),
+    path('ventas/camisetas/stock/<int:pk>/eliminar/', views.StockCamisetaDeleteView.as_view(),
+         name='stock_camiseta_eliminar'),
+]

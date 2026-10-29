@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Inicio</a></li>
+<li class="breadcrumb-item"><a href="{% url 'ventas_camisetas' %}">Camisetas</a></li>
+<li class="breadcrumb-item active" aria-current="page">Compras</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% include "ventas/aviso_stock.html" %}
+{% include "ventas/pestanas.html" with actual='stock_camisetas' %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">Compras ({{ entradas|length }})</h1>
+    <a class="btn btn-primary" href="{% url 'stock_camiseta_nuevo' %}">Registrar compra</a>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th scope="col" class="text-nowrap">Fecha de compra</th>
+                <th scope="col">Camiseta</th>
+                <th scope="col" class="text-end">Unidades</th>
+                <th scope="col" class="text-end text-nowrap">Coste total</th>
+                <th scope="col" class="text-nowrap">Registrado por</th>
+                <th scope="col" class="text-end"><span class="visually-hidden">Acciones</span></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entrada in entradas %}
+            <tr>
+                <td class="text-nowrap">{{ entrada.fecha|date:'d/m/Y' }}</td>
+                <td>{{ entrada.camiseta }}</td>
+                <td class="text-end">{{ entrada.cantidad }}</td>
+                <td class="text-end text-nowrap">{{ entrada.coste_total }} €</td>
+                <td>{{ entrada.registrado_por }}</td>
+                {% url 'stock_camiseta_editar' entrada.pk as editar %}
+                {% include "ventas/acciones.html" with objeto=entrada editar=editar %}
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="text-body-secondary">Todavía no hay compras registradas.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{# Los diálogos van fuera de la tabla: dentro de una fila el navegador los sacaría de ahí. #}
+{% for entrada in entradas %}
+{% url 'stock_camiseta_eliminar' entrada.pk as url %}
+{% include "ventas/eliminar.html" with objeto=entrada url=url título='Eliminar compra' %}
+{% endfor %}
+{% endblock content %}

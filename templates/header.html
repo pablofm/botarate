@@ -37,13 +37,24 @@
                 <a class="nav-link" href="{% url 'matriculas' %}">Matrículas</a>
                 {% endif %}
             </li>
-            <li class="nav-item">
-                {% if request.resolver_match.route|slice:':7' == 'ambigu/' %}
-                <a class="nav-link active" aria-current="page" href="{% url 'ventas_bebidas' %}">Ambigú</a>
-                {% else %}
-                <a class="nav-link" href="{% url 'ventas_bebidas' %}">Ambigú</a>
-                {% endif %}
+            {% with ruta=request.resolver_match.route %}
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle{% if ruta|slice:':7' == 'ventas/' %} active{% endif %}"
+                   href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Ventas</a>
+                <ul class="dropdown-menu">
+                    <li>
+                        <a class="dropdown-item{% if ruta|slice:':14' == 'ventas/ambigu/' %} active{% endif %}"
+                           {% if ruta|slice:':14' == 'ventas/ambigu/' %}aria-current="page"{% endif %}
+                           href="{% url 'ventas_bebidas' %}">Ambigú</a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item{% if ruta|slice:':17' == 'ventas/camisetas/' %} active{% endif %}"
+                           {% if ruta|slice:':17' == 'ventas/camisetas/' %}aria-current="page"{% endif %}
+                           href="{% url 'ventas_camisetas' %}">Camisetas</a>
+                    </li>
+                </ul>
             </li>
+            {% endwith %}
             {% endif %}
         </ul>
         <div class="d-flex align-items-center gap-3">

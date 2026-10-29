@@ -1,30 +1,30 @@
-{% extends 'ambigu/form.html' %}
+{% extends 'ventas/form.html' %}
 {% load django_bootstrap5 %}
 
 {% block antes_del_formulario %}
 <div class="mb-4 p-3 border rounded text-center">
     <div class="text-body-secondary">Importe de la venta</div>
-    <output id="importe-venta" class="d-block display-4 fw-semibold" for="id_bebida id_cantidad id_forma_pago" aria-live="polite">—</output>
+    <output id="importe-venta" class="d-block display-4 fw-semibold" for="id_{{ producto }} id_cantidad id_forma_pago" aria-live="polite">—</output>
 </div>
 {% endblock antes_del_formulario %}
 
 {% block campos %}
 {% bootstrap_form_errors form type='non_fields' %}
+{# Fecha, producto, unidades y forma de pago: los campos de las ventas, en este orden. #}
 <div class="row">
-    <div class="col-md-6 col-lg-2">{% bootstrap_field form.fecha %}</div>
-    <div class="col-md-6 col-lg-4">{% bootstrap_field form.bebida %}</div>
-    <div class="col-md-6 col-lg-2">{% bootstrap_field form.cantidad %}</div>
-    <div class="col-md-6 col-lg-4">{% bootstrap_field form.forma_pago %}</div>
+    {% for campo in form %}
+    <div class="col-md-6 col-lg-{% cycle 2 4 2 4 %}">{% bootstrap_field campo %}</div>
+    {% endfor %}
 </div>
 {% endblock campos %}
 
 {% block scripts %}
 <script>
-    // El importe se recalcula al elegir bebida, cambiar las unidades o la forma de pago
+    // El importe se recalcula al elegir el producto, cambiar las unidades o la forma de pago
     // (una invitación o merma sale gratis); el que vale es el que calcula el servidor al
     // guardar, con el mismo PVP.
     (function () {
-        const bebida = document.getElementById('id_bebida');
+        const producto = document.getElementById('id_{{ producto }}');
         const cantidad = document.getElementById('id_cantidad');
         const formaPago = document.getElementById('id_forma_pago');
         const importe = document.getElementById('importe-venta');
@@ -32,14 +32,14 @@
 
         // En céntimos, para que la coma flotante no deje importes como 0,30000000000000004.
         function actualizar() {
-            const precio = parseFloat(bebida.selectedOptions[0]?.dataset.precio);
+            const precio = parseFloat(producto.selectedOptions[0]?.dataset.precio);
             const unidades = parseInt(cantidad.value, 10);
             const gratis = formaPago.querySelector('input:checked')?.value === 'INVITACION';
             importe.textContent = precio && unidades > 0
                 ? euros.format(gratis ? 0 : Math.round(precio * 100) * unidades / 100) : '—';
         }
 
-        bebida.addEventListener('change', actualizar);
+        producto.addEventListener('change', actualizar);
         cantidad.addEventListener('input', actualizar);
         formaPago.addEventListener('change', actualizar);
         actualizar();

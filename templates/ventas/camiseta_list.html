@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Inicio</a></li>
+<li class="breadcrumb-item"><a href="{% url 'ventas_camisetas' %}">Camisetas</a></li>
+<li class="breadcrumb-item active" aria-current="page">Tallas</li>
+{% endblock breadcrumb %}
+
+{% block content %}
+{% include "ventas/aviso_stock.html" %}
+{% include "ventas/pestanas.html" with actual='camisetas' %}
+
+<h1 class="h3 mb-4">Camisetas ({{ camisetas|length }})</h1>
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th scope="col">Corte</th>
+                <th scope="col">Talla</th>
+                <th scope="col" class="text-end text-nowrap">Precio de compra</th>
+                <th scope="col" class="text-end">PVP</th>
+                <th scope="col" class="text-end">Margen</th>
+                <th scope="col" class="text-end text-nowrap">Stock actual</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for camiseta in camisetas %}
+            <tr>
+                <td>{{ camiseta.get_corte_display }}</td>
+                <td>{{ camiseta.talla }}</td>
+                <td class="text-end text-nowrap">{{ camiseta.precio_compra }} €</td>
+                <td class="text-end text-nowrap">{{ camiseta.precio_venta }} €</td>
+                <td class="text-end text-nowrap">{{ camiseta.margen_unitario }} €</td>
+                <td class="text-end{% if camiseta.stock_actual < camiseta.stock_mínimo %} text-danger fw-semibold{% endif %}">{{ camiseta.stock_actual }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="text-body-secondary">Todavía no hay camisetas registradas.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock content %}

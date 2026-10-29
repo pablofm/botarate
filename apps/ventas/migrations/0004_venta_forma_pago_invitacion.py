@@ -5,8 +5,12 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
+    # Es la misma migración que se aplicó cuando la app se llamaba «ambigu»: donde ya
+    # esté aplicada, Django la da por hecha y no vuelve a crear ni cargar nada.
+    replaces = [('ambigu', '0004_venta_forma_pago_invitacion')]
+
     dependencies = [
-        ('ambigu', '0003_ventas_de_septiembre'),
+        ('ventas', '0003_ventas_de_septiembre'),
     ]
 
     operations = [

@@ -7,8 +7,8 @@
 {% endblock breadcrumb %}
 
 {% block content %}
-{% include "ambigu/aviso_stock.html" %}
-{% include "ambigu/pestanas.html" with actual='categorias_bebida' %}
+{% include "ventas/aviso_stock.html" %}
+{% include "ventas/pestanas.html" with actual='categorias_bebida' %}
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="h3 mb-0">Categorías ({{ categorías|length }})</h1>
@@ -30,7 +30,7 @@
                 <td>{{ categoría.nombre }}</td>
                 <td>{{ categoría.bebidas.all|join:', '|default:'—' }}</td>
                 {% url 'categoria_bebida_editar' categoría.pk as editar %}
-                {% include "ambigu/acciones.html" with objeto=categoría editar=editar %}
+                {% include "ventas/acciones.html" with objeto=categoría editar=editar %}
             </tr>
             {% empty %}
             <tr>
@@ -44,6 +44,6 @@
 {# Los diálogos van fuera de la tabla: dentro de una fila el navegador los sacaría de ahí. #}
 {% for categoría in categorías %}
 {% url 'categoria_bebida_eliminar' categoría.pk as url %}
-{% include "ambigu/eliminar.html" with objeto=categoría url=url título='Eliminar categoría' %}
+{% include "ventas/eliminar.html" with objeto=categoría url=url título='Eliminar categoría' %}
 {% endfor %}
 {% endblock content %}
