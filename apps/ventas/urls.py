@@ -1,11 +1,9 @@
 from django.urls import path
-from django.views.generic import RedirectView
-
 from . import views
 
 urlpatterns = [
     # La portada de ventas es la del ambigú, y la de cada apartado, sus ventas.
-    path('ventas/', RedirectView.as_view(pattern_name='ventas_bebidas'), name='ventas'),
+    path('ventas/', views.PortadaVentasView.as_view(), name='ventas'),
     path('ventas/ambigu/', views.VentaBebidaListView.as_view(), name='ventas_bebidas'),
     path('ventas/ambigu/nueva/', views.VentaBebidaCreateView.as_view(), name='venta_bebida_nueva'),
     path('ventas/ambigu/<int:pk>/editar/', views.VentaBebidaUpdateView.as_view(), name='venta_bebida_editar'),

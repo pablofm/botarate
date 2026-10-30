@@ -13,6 +13,7 @@ from apps.pagos.models import FormaPago
 from .models import (
     INICIO_STOCK, Bebida, Camiseta, CategoríaBebida, Corte, FormaPagoVenta, StockBebida, StockCamiseta, Talla,
     VentaBebida, VentaCamiseta)
+from .urls import urlpatterns
 
 
 class StockBebidaTests(TestCase):
@@ -152,6 +153,24 @@ class VistasAmbigúTests(TestCase):
             with self.subTest(vista=vista):
                 self.assertEqual(self.client.get(reverse(vista)).status_code, 403)
 
+    def test_las_ventas_son_solo_del_staff(self):
+        """Ni siquiera un superusuario entra si no es staff: ni en el ambigú ni en las camisetas."""
+        superusuario = get_user_model().objects.create_user(
+            email='super@botarate.es', password='x', is_active=True, is_superuser=True)
+        Bebida.objects.create(categoría=self.zumos, nombre='Zumo de piña', precio_venta=Decimal('2'), stock_mínimo=6)
+        compra = StockBebida.objects.create(
+            bebida=self.cerveza, cantidad=6, precio_compra=Decimal('0.45'), registrado_por=self.administrativo)
+        self.client.force_login(superusuario)
+
+        for patrón in urlpatterns:
+            argumentos = [compra.pk] if '<int:pk>' in str(patrón.pattern) else []
+            with self.subTest(vista=patrón.name):
+                for método in (self.client.get, self.client.post):
+                    self.assertIn(método(reverse(patrón.name, args=argumentos)).status_code, (403, 405))
+        html = self.client.get(reverse('dashboard')).content.decode()
+        self.assertNotIn(reverse('ventas_bebidas'), html)
+        self.assertNotIn('Zumo de piña', html)
+
     def test_la_portada_de_ventas_abre_las_del_ambigú(self):
         self.assertRedirects(self.client.get('/ventas/'), reverse('ventas_bebidas'))
 
@@ -167,13 +186,30 @@ class VistasAmbigúTests(TestCase):
         respuesta = self.client.get(reverse('bebidas'))
 
         # La cerveza está justo en el mínimo, así que solo falta el zumo.
-        self.assertQuerySetEqual(respuesta.context['por_reponer'], [zumo])
+        bebidas = [apartado['artículos'] for apartado in respuesta.context['por_reponer']
+                   if apartado['producto'] == 'bebida']
+        self.assertEqual(bebidas, [[zumo]])
         self.assertContains(respuesta, 'class="text-end text-danger fw-semibold">0</td>', count=1)
-        for vista in ('bebidas', 'categorias_bebida', 'stock_bebidas', 'ventas_bebidas', 'venta_bebida_nueva'):
+        # Sale en cualquier página, no solo en las del ambigú.
+        for vista in ('bebidas', 'categorias_bebida', 'stock_bebidas', 'ventas_bebidas', 'venta_bebida_nueva',
+                      'ventas_camisetas', 'dashboard', 'socios', 'clases', 'calendario', 'pagos'):
             with self.subTest(vista=vista):
                 html = self.client.get(reverse(vista)).content.decode()
+                # El aviso va en un modal que abre el botón rojo de la barra de navegación.
+                self.assertRegex(html, r'(?s)<button[^>]*btn-danger[^>]*data-bs-target="#avisos"[^>]*>!!!!</button>')
                 self.assertIn('Hay que comprar esta bebida', html)
+                self.assertIn('id="avisos-titulo">¡Importante!</h1>', html)
+                self.assertRegex(html, r'<h2[^>]*>Bebidas</h2>')
                 self.assertRegex(html, r'(?s)<td[^>]*>Zumo de piña</td>\s*<td[^>]*>0</td>\s*<td[^>]*>6</td>')
+
+    def test_el_profesorado_no_ve_el_aviso_de_stock(self):
+        Bebida.objects.create(categoría=self.zumos, nombre='Zumo de piña', precio_venta=Decimal('2'), stock_mínimo=6)
+        self.client.force_login(self.profesor)
+
+        respuesta = self.client.get(reverse('dashboard'))
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertNotContains(respuesta, 'id="avisos"')
 
     def test_los_listados_se_ven(self):
         StockBebida.objects.create(
@@ -451,10 +487,29 @@ class VistasCamisetasTests(TestCase):
                 self.assertRegex(html, rf'class="dropdown-item active"\s*aria-current="page"\s*href="[^"]+">{activa}<')
                 self.assertRegex(html, rf'class="dropdown-item"\s*href="[^"]+">{inactiva}<')
 
-    def test_las_bebidas_no_avisan_de_las_camisetas(self):
+    def test_el_aviso_junta_las_bebidas_y_las_camisetas(self):
         Bebida.objects.update(stock_mínimo=0)
 
-        self.assertNotContains(self.client.get(reverse('ventas_bebidas')), 'Hay que comprar')
+        # Desde el ambigú también se ve que faltan camisetas, pero no bebidas.
+        respuesta = self.client.get(reverse('ventas_bebidas'))
+        self.assertContains(respuesta, 'Hay que comprar esta camiseta')
+        self.assertNotContains(respuesta, 'Hay que comprar esta bebida')
+
+        cerveza = Bebida.objects.get(nombre='Cerveza con alcohol')
+        cerveza.stock_mínimo = 1
+        cerveza.save()
+        respuesta = self.client.get(reverse('dashboard'))
+        self.assertContains(respuesta, 'Hay que comprar esta bebida')
+        self.assertContains(respuesta, 'Hay que comprar esta camiseta')
+        self.assertContains(respuesta, 'id="avisos"', count=1)
+
+    def test_sin_nada_que_comprar_no_hay_botón(self):
+        Bebida.objects.update(stock_mínimo=0)
+        Camiseta.objects.update(stock_mínimo=0)
+
+        respuesta = self.client.get(reverse('dashboard'))
+        self.assertNotContains(respuesta, 'Hay que comprar')
+        self.assertNotContains(respuesta, 'id="avisos"')
 
     def test_registra_una_compra_y_una_venta(self):
         respuesta = self.client.post(reverse('stock_camiseta_nuevo'), {

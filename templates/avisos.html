@@ -1,0 +1,19 @@
+{% if por_reponer or sin_pagar or por_pagar %}
+<button type="button" class="btn btn-danger btn-lg fw-bold fs-3 px-4 py-1 avisos" data-bs-toggle="modal"
+        data-bs-target="#avisos" title="Avisos" aria-label="Avisos">!!!!</button>
+
+<div class="modal fade" id="avisos" tabindex="-1" aria-labelledby="avisos-titulo" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content">
+            <div class="modal-header text-bg-danger">
+                <h1 class="modal-title fs-5" id="avisos-titulo">¡Importante!</h1>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                {% include "pagos/aviso_pagos.html" %}
+                {% include "ventas/aviso_stock.html" %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}

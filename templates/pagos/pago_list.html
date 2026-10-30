@@ -61,7 +61,6 @@
     </table>
 </div>
 
-{# Los diálogos van fuera de la tabla: dentro de una fila el navegador los sacaría de ahí. #}
 {% for pago in pagos %}
 <div class="modal fade" id="eliminar-pago-{{ pago.pk }}" tabindex="-1" aria-labelledby="eliminar-pago-{{ pago.pk }}-título" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">

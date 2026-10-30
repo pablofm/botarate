@@ -1,6 +1,6 @@
 from django import forms
 
-from apps.clases.models import Alumno
+from apps.clases.models import Matrícula
 
 from .models import FORMAS_PAGO_PENDIENTES, Pago
 
@@ -27,7 +27,7 @@ class PagoForm(forms.ModelForm):
     # cobrar a nadie un curso al que no va.
     matrícula = MatrículaChoiceField(
         label='Alumna y curso',
-        queryset=Alumno.cursos.through.objects
+        queryset=Matrícula.objects
         .select_related('alumno__socio', 'curso')
         .order_by('alumno__socio__nombre', 'curso__nombre'),
         empty_label='Elige una alumna',

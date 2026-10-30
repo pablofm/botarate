@@ -3,7 +3,7 @@ from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, ListView
 
 from apps.accounts.mixins import SoloAdministraciónMixin
-from apps.clases.models import Alumno
+from apps.clases.models import Matrícula
 
 from .forms import PagoForm
 from .models import Pago
@@ -29,7 +29,7 @@ class PagoCreateView(SoloAdministraciónMixin, CreateView):
         # Desde la ficha del curso llega ya elegida la alumna a la que se cobra.
         alumno, curso = self.request.GET.get('alumno'), self.request.GET.get('curso')
         if alumno and curso:
-            matrícula = Alumno.cursos.through.objects.filter(alumno=alumno, curso=curso).first()
+            matrícula = Matrícula.objects.filter(alumno=alumno, curso=curso).first()
             if matrícula:
                 initial['matrícula'] = matrícula
         return initial

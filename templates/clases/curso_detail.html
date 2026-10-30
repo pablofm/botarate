@@ -17,7 +17,7 @@
     {% endwith %}
 </p>
 
-<h2 class="h5 mt-4">Alumnas ({{ curso.alumnos.all|length }})</h2>
+<h2 class="h5 mt-4">Alumnas ({{ curso.matrículas.all|length }})</h2>
 <div class="table-responsive">
     <table class="table table-hover align-middle">
         <thead>
@@ -29,10 +29,14 @@
             </tr>
         </thead>
         <tbody>
-            {% for alumno in curso.alumnos.all %}
+            {% for matrícula in curso.matrículas.all %}
+            {% with alumno=matrícula.alumno %}
             <tr>
                 {% if es_administración %}
-                <td><a href="{% url 'socio_editar' alumno.socio.pk %}">{{ alumno.socio.nombre }}</a></td>
+                <td>
+                    <a href="{% url 'matricula_editar' matrícula.pk %}">{{ alumno.socio.nombre }}</a>
+                    {% if matrícula.exento_pago %}<span class="badge rounded-pill text-bg-light border fw-normal ms-1">exenta de pago</span>{% endif %}
+                </td>
                 {% else %}
                 <td>{{ alumno.socio.nombre }}</td>
                 {% endif %}
@@ -53,6 +57,7 @@
                 </td>
                 {% endif %}
             </tr>
+            {% endwith %}
             {% empty %}
             <tr>
                 <td colspan="{% if es_administración %}2{% else %}1{% endif %}" class="text-body-secondary">Este curso todavía no tiene alumnas.</td>
@@ -65,8 +70,8 @@
 {% if es_administración %}
 <a class="btn btn-primary" href="{% url 'alumno_matricular' %}?curso={{ curso.pk }}">Matricular alumna</a>
 
-{# Los diálogos van fuera de la tabla: dentro de una fila el navegador los sacaría de ahí. #}
-{% for alumno in curso.alumnos.all %}
+{% for matrícula in curso.matrículas.all %}
+{% with alumno=matrícula.alumno %}
 <div class="modal fade" id="desmatricular-{{ alumno.pk }}" tabindex="-1" aria-labelledby="desmatricular-{{ alumno.pk }}-título" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -88,6 +93,7 @@
         </div>
     </div>
 </div>
+{% endwith %}
 {% endfor %}
 {% endif %}
 
@@ -122,7 +128,7 @@
                     {% with asistentes=clase.asistentes.all %}
                     {% if asistentes %}
                     <div class="d-flex flex-wrap align-items-center gap-1">
-                        <span class="small text-body-secondary me-1">{{ asistentes|length }} de {{ curso.alumnos.all|length }}:</span>
+                        <span class="small text-body-secondary me-1">{{ asistentes|length }} de {{ curso.matrículas.all|length }}:</span>
                         {% for alumno in asistentes %}
                         <span class="badge rounded-pill text-bg-light border fw-normal">{{ alumno.socio.nombre }}</span>
                         {% endfor %}
@@ -162,7 +168,6 @@
     </table>
 </div>
 
-{# Los diálogos van fuera de la tabla: dentro de una fila el navegador los sacaría de ahí. #}
 {% for clase in curso.clases.all %}
 {% if clase.reporte %}
 <div class="modal fade" id="reporte-{{ clase.pk }}" tabindex="-1" aria-labelledby="reporte-{{ clase.pk }}-título" aria-hidden="true">

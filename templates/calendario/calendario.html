@@ -20,7 +20,6 @@
     </div>
 </div>
 
-{# En pantallas estrechas la rejilla no cabe: basta con la lista de debajo. #}
 <div class="table-responsive d-none d-md-block mb-4">
     <table class="table table-bordered calendario">
         <thead>
@@ -54,7 +53,6 @@
 <ul class="list-group mb-4">
     {% for evento in eventos_mes %}
     <li class="list-group-item{% if evento.ya_pasó %} text-body-secondary{% endif %}" id="evento-{{ evento.pk }}">
-        {# En el móvil el cartel va arriba a todo lo ancho; a partir de sm, en su columna a la izquierda. #}
         <div class="row g-3">
             <div class="col-sm-4 col-lg-3 text-center">
                 <a href="{{ evento.url_cartel }}" target="_blank" rel="noopener">
@@ -99,7 +97,6 @@
             <button class="btn btn-outline-secondary" type="button" id="copiar-calendario">Copiar</button>
         </div>
         {% if user.is_staff %}
-        {# Solo para quien gestiona la sala: es el enlace que va en carteles, redes o un QR. #}
         <p class="small text-body-secondary mt-3 mb-0">
             Enlace único para compartir, que lleva a cada dispositivo a su calendario:
             <a href="{{ url_suscribirse }}">{{ url_suscribirse }}</a>

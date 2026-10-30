@@ -1,20 +1,21 @@
 from django.contrib import messages
 from django.contrib.messages.views import SuccessMessageMixin
-from django.db.models import F, ProtectedError
+from django.db.models import ProtectedError
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, DeleteView, ListView, UpdateView
+from django.views.generic import CreateView, DeleteView, ListView, RedirectView, UpdateView
 
-from apps.accounts.mixins import SoloAdministraciónMixin
+from apps.accounts.mixins import SoloStaffMixin
 
 from .forms import (
     BebidaForm, CategoríaBebidaForm, StockBebidaForm, StockCamisetaForm, VentaBebidaForm, VentaCamisetaForm)
 from .models import Bebida, Camiseta, CategoríaBebida, StockBebida, StockCamiseta, VentaBebida, VentaCamiseta
 
 
-class ApartadoMixin(SoloAdministraciónMixin):
+class ApartadoMixin(SoloStaffMixin):
     """Las ventas se dividen en apartados (el ambigú, las camisetas), cada uno con su
-    producto; todas sus páginas avisan de los productos que hay que comprar."""
+    producto. El aviso de lo que hay que comprar no es cosa suya: sale en todas las
+    páginas (ventas.context_processors.por_reponer)."""
 
     producto = None
     apartado = ''
@@ -23,8 +24,6 @@ class ApartadoMixin(SoloAdministraciónMixin):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Si están justo en el stock mínimo aún no hace falta comprar.
-        context['por_reponer'] = self.producto.objects.con_stock().filter(stock_actual__lt=F('stock_mínimo'))
         context['producto'] = self.producto._meta.model_name
         context['apartado'] = self.apartado
         context['portada'] = self.portada
@@ -41,6 +40,12 @@ class CamisetasMixin(ApartadoMixin):
     producto = Camiseta
     apartado = 'Camisetas'
     portada = 'ventas_camisetas'
+
+
+class PortadaVentasView(SoloStaffMixin, RedirectView):
+    """La portada de ventas es la del ambigú."""
+
+    pattern_name = 'ventas_bebidas'
 
 
 class FormularioMixin(SuccessMessageMixin):
@@ -75,7 +80,7 @@ class RegistradoPorMixin:
         return super().form_valid(form)
 
 
-class EliminarMixin(SoloAdministraciónMixin):
+class EliminarMixin(SoloStaffMixin):
     # Se confirma en el diálogo del listado, así que no hay página propia que servir por GET.
     http_method_names = ['post']
     sección = ''

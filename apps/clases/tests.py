@@ -7,7 +7,7 @@ from django.utils import timezone
 
 from apps.socios.models import Socio
 
-from .models import Alumno, Clase, Curso, DíaSemana
+from .models import Alumno, Clase, Curso, DíaSemana, Matrícula
 
 
 class MatricularAlumnaTests(TestCase):
@@ -42,6 +42,19 @@ class MatricularAlumnaTests(TestCase):
         self.assertRedirects(respuesta, reverse('curso_detalle', args=[self.curso.pk]))
         alumna = Alumno.objects.get(socio=self.socia)
         self.assertQuerySetEqual(alumna.cursos.all(), [self.curso])
+
+    def test_se_puede_matricular_exenta_de_pago(self):
+        self.client.post(reverse('alumno_matricular'), {'socio': self.socia.pk, 'curso': self.curso.pk})
+        self.client.post(
+            reverse('alumno_matricular'), {'socio': self.socia.pk, 'curso': self.otro_curso.pk, 'exento_pago': 'on'})
+
+        self.assertQuerySetEqual(
+            Matrícula.objects.order_by('curso__nombre').values_list('curso__nombre', 'exento_pago'),
+            [('Acrobacia', False), ('Esgrima escénica', True)])
+        # En el listado se ve qué matrícula no paga.
+        html = self.client.get(reverse('matriculas')).content.decode().split('<main', 1)[1]
+        self.assertIn('Esgrima escénica · exenta de pago', html)
+        self.assertNotIn('Acrobacia · exenta de pago', html)
 
     def test_la_misma_socia_puede_ir_a_varios_cursos_con_una_sola_ficha(self):
         for curso in (self.curso, self.otro_curso):
@@ -79,18 +92,37 @@ class MatricularAlumnaTests(TestCase):
         self.assertNotContains(ficha, 'Matricular alumna')
         self.assertNotContains(ficha, 'Eliminar matrícula')
 
-    def test_solo_la_administración_ve_el_enlace_a_la_ficha_de_socia_en_el_curso(self):
+    def test_en_el_curso_la_alumna_lleva_a_su_matrícula_y_solo_para_la_administración(self):
         alumna = Alumno.objects.create(socio=self.socia)
         alumna.cursos.add(self.curso)
         detalle = reverse('curso_detalle', args=[self.curso.pk])
-        ficha = reverse('socio_editar', args=[self.socia.pk])
+        matrícula = reverse('matricula_editar', args=[Matrícula.objects.get().pk])
 
-        self.assertContains(self.client.get(detalle), f'href="{ficha}"')
+        respuesta = self.client.get(detalle)
+        self.assertContains(respuesta, f'<a href="{matrícula}">Ana Ruiz</a>', html=True)
+        # La ficha de socia ya no se abre desde el curso, sino desde la matrícula.
+        self.assertNotContains(respuesta, reverse('socio_editar', args=[self.socia.pk]))
 
         self.client.force_login(self.profesor)
         respuesta = self.client.get(detalle)
         self.assertContains(respuesta, 'Ana Ruiz')
-        self.assertNotContains(respuesta, f'href="{ficha}"')
+        self.assertNotContains(respuesta, f'href="{matrícula}"')
+        self.assertEqual(self.client.get(matrícula).status_code, 403)
+        self.assertEqual(self.client.post(matrícula, {'exento_pago': 'on'}).status_code, 403)
+
+    def test_en_la_matrícula_se_exime_de_pago(self):
+        alumna = Alumno.objects.create(socio=self.socia)
+        alumna.cursos.add(self.curso)
+        matrícula = Matrícula.objects.get()
+        url = reverse('matricula_editar', args=[matrícula.pk])
+
+        self.assertContains(self.client.get(url), reverse('socio_editar', args=[self.socia.pk]))
+        respuesta = self.client.post(url, {'exento_pago': 'on'})
+
+        self.assertRedirects(respuesta, reverse('curso_detalle', args=[self.curso.pk]))
+        matrícula.refresh_from_db()
+        self.assertTrue(matrícula.exento_pago)
+        self.assertContains(self.client.get(reverse('curso_detalle', args=[self.curso.pk])), 'exenta de pago')
 
     def test_el_listado_agrupa_los_cursos_bajo_el_nombre_de_cada_alumna(self):
         alumna = Alumno.objects.create(socio=self.socia)
@@ -99,8 +131,9 @@ class MatricularAlumnaTests(TestCase):
         respuesta = self.client.get(reverse('matriculas'))
 
         self.assertQuerySetEqual(respuesta.context['alumnas'], [alumna])
-        # El nombre aparece una sola vez, con sus dos cursos al lado.
-        self.assertContains(respuesta, 'Ana Ruiz', count=1)
+        # El nombre aparece una sola vez en el listado, con sus dos cursos al lado (en la
+        # cabecera vuelve a salir, en el aviso de pagos, porque no ha pagado ninguno).
+        self.assertEqual(respuesta.content.decode().split('<main', 1)[1].count('Ana Ruiz'), 1)
         self.assertContains(respuesta, 'Acrobacia')
         self.assertContains(respuesta, 'Esgrima escénica')
         # El botón lleva al formulario de siempre.

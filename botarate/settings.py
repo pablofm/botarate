@@ -72,6 +72,8 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'apps.accounts.context_processors.administración',
+                'apps.ventas.context_processors.por_reponer',
+                'apps.pagos.context_processors.pagos_pendientes',
             ],
         },
     },

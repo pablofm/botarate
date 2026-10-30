@@ -23,3 +23,25 @@
 .cartel {
     max-height: 70vh;
 }
+
+/* El botón de avisos de la barra de navegación tiene que verse: grande, con borde
+   y latiendo, para que nadie pase sin enterarse de que hay que comprar o cobrar. */
+.avisos {
+    letter-spacing: .1em;
+    line-height: 1.2;
+    box-shadow: 0 0 0 .25rem rgba(var(--bs-danger-rgb), .35);
+    animation: avisos-latido 1.5s ease-in-out infinite;
+}
+@keyframes avisos-latido {
+    50% { box-shadow: 0 0 0 .6rem rgba(var(--bs-danger-rgb), 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .avisos { animation: none; }
+}
+/* Las secciones del modal de avisos, separadas; la última sin margen debajo. */
+.aviso + .aviso {
+    margin-top: 1.5rem;
+}
+.aviso:last-child > :last-child {
+    margin-bottom: 0;
+}

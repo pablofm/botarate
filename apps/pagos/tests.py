@@ -5,9 +5,10 @@ from django.contrib.auth import get_user_model
 from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
-from apps.clases.models import Alumno, Curso, DíaSemana
+from apps.clases.models import Alumno, Curso, DíaSemana, Matrícula
 from apps.socios.models import Socio
 
+from .context_processors import matrículas_por_pagar
 from .models import FormaPago, Modalidad, Pago, sumar_meses
 
 
@@ -34,7 +35,7 @@ class PagoTests(TestCase):
             nombre='Ana Ruiz', documento='12345678Z', teléfono='600 123 456', email='ana@example.com')
         cls.alumna = Alumno.objects.create(socio=socia)
         cls.alumna.cursos.add(cls.curso)
-        cls.matrícula = Alumno.cursos.through.objects.get(alumno=cls.alumna, curso=cls.curso)
+        cls.matrícula = Matrícula.objects.get(alumno=cls.alumna, curso=cls.curso)
 
     def setUp(self):
         self.client.force_login(self.administrativo)
@@ -161,3 +162,98 @@ class SumarMesesTests(SimpleTestCase):
         self.assertEqual(sumar_meses(datetime.date(2027, 1, 31), 1), datetime.date(2027, 2, 28))
         self.assertEqual(sumar_meses(datetime.date(2026, 11, 30), 3), datetime.date(2027, 2, 28))
         self.assertEqual(sumar_meses(datetime.date(2026, 12, 15), 12), datetime.date(2027, 12, 15))
+
+
+class AvisoDePagosTests(TestCase):
+    HOY = datetime.date(2026, 10, 30)
+
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        cls.administrativo = User.objects.create_user(
+            email='admin@botarate.es', password='x', is_active=True, is_staff=True)
+        cls.profesor = User.objects.create_user(email='profe@botarate.es', password='x', is_active=True)
+        cls.curso = Curso.objects.create(
+            nombre='Bufón', días_semana=[DíaSemana.MIÉRCOLES], hora_inicio=datetime.time(19, 45),
+            hora_fin=datetime.time(21, 15), profesor_principal=cls.profesor)
+        cls.otro_curso = Curso.objects.create(
+            nombre='Melodrama', días_semana=[DíaSemana.VIERNES], hora_inicio=datetime.time(18, 0),
+            hora_fin=datetime.time(19, 30), profesor_principal=cls.profesor)
+        socia = Socio.objects.create(
+            nombre='Ana Ruiz', documento='12345678Z', teléfono='600 123 456', email='ana@example.com')
+        cls.alumna = Alumno.objects.create(socio=socia)
+        cls.alumna.cursos.add(cls.curso)
+
+    def pagar(self, modalidad, desde, curso=None):
+        return Pago.objects.create(
+            alumno=self.alumna, curso=curso or self.curso, modalidad=modalidad, desde=desde,
+            importe=Decimal('45'), forma_pago=FormaPago.EFECTIVO, registrado_por=self.administrativo)
+
+    def avisos(self):
+        sin_pagar, por_pagar = matrículas_por_pagar(self.HOY)
+        return ([(p['matrícula'].curso.nombre, p['cubierto_hasta']) for p in sin_pagar],
+                [(p['matrícula'].curso.nombre, p['vence']) for p in por_pagar])
+
+    def test_sin_ningún_pago_no_está_al_corriente(self):
+        self.assertEqual(self.avisos(), ([('Bufón', None)], []))
+
+    def test_con_lo_pagado_vencido_dice_hasta_cuándo_pagó(self):
+        self.pagar(Modalidad.MENSUAL, datetime.date(2026, 9, 1))
+
+        self.assertEqual(self.avisos(), ([('Bufón', datetime.date(2026, 9, 30))], []))
+
+    def test_avisa_cinco_días_antes_de_que_se_acabe_lo_pagado(self):
+        # Octubre se acaba mañana, así que el 1 de noviembre ya tiene que estar pagado.
+        self.pagar(Modalidad.MENSUAL, datetime.date(2026, 10, 1))
+        self.assertEqual(self.avisos(), ([], [('Bufón', datetime.date(2026, 11, 1))]))
+
+    def test_no_avisa_si_aún_queda_más_de_cinco_días(self):
+        self.pagar(Modalidad.MENSUAL, datetime.date(2026, 10, 4))  # Hay que pagar el 4 de noviembre.
+        self.assertEqual(self.avisos(), ([], [('Bufón', datetime.date(2026, 11, 4))]))
+        Pago.objects.all().delete()
+        self.pagar(Modalidad.MENSUAL, datetime.date(2026, 10, 5))  # El 5, dentro de seis días.
+        self.assertEqual(self.avisos(), ([], []))
+
+    def test_el_mes_siguiente_ya_pagado_cuenta(self):
+        self.pagar(Modalidad.MENSUAL, datetime.date(2026, 10, 1))
+        self.pagar(Modalidad.MENSUAL, datetime.date(2026, 11, 1))
+
+        self.assertEqual(self.avisos(), ([], []))
+
+    def test_una_clase_suelta_solo_cubre_su_día(self):
+        self.pagar(Modalidad.CLASE, datetime.date(2026, 10, 28))
+        self.assertEqual(self.avisos(), ([('Bufón', datetime.date(2026, 10, 28))], []))
+        self.pagar(Modalidad.CLASE, self.HOY)
+        self.assertEqual(self.avisos()[1], [('Bufón', datetime.date(2026, 10, 31))])
+
+    def test_cada_curso_se_paga_aparte(self):
+        self.alumna.cursos.add(self.otro_curso)
+        self.pagar(Modalidad.TRIMESTRAL, datetime.date(2026, 10, 1))
+        # Lo pagado de otro curso no cuenta para este.
+        self.pagar(Modalidad.ANUAL, datetime.date(2026, 1, 1), curso=self.curso)
+
+        self.assertEqual(self.avisos(), ([('Melodrama', None)], []))
+
+    def test_la_matrícula_exenta_de_pago_no_sale(self):
+        self.alumna.cursos.add(self.otro_curso)
+        Matrícula.objects.filter(curso=self.curso).update(exento_pago=True)
+
+        # Solo es exenta la de Bufón: la de Melodrama sigue sin pagar.
+        self.assertEqual(self.avisos(), ([('Melodrama', None)], []))
+
+    def test_desmatriculada_no_sale(self):
+        self.alumna.cursos.clear()
+        self.assertEqual(self.avisos(), ([], []))
+
+    def test_sale_en_el_modal_de_avisos_de_cualquier_página(self):
+        self.client.force_login(self.administrativo)
+        for vista in ('dashboard', 'socios', 'pagos', 'ventas_bebidas'):
+            with self.subTest(vista=vista):
+                html = self.client.get(reverse(vista)).content.decode()
+                self.assertIn('data-bs-target="#avisos"', html)
+                self.assertRegex(html, r'(?s)<td[^>]*text-danger[^>]*>Ana Ruiz</td>\s*<td>Bufón</td>')
+                self.assertIn('Nunca ha pagado', html)
+
+    def test_el_profesorado_no_ve_los_pagos(self):
+        self.client.force_login(self.profesor)
+        self.assertNotContains(self.client.get(reverse('dashboard')), 'Ana Ruiz')

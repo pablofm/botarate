@@ -92,7 +92,7 @@ class Alumno(models.Model):
         on_delete=models.PROTECT,
         related_name='alumno',
         verbose_name='socio')
-    cursos = models.ManyToManyField(Curso, related_name='alumnos', verbose_name='cursos')
+    cursos = models.ManyToManyField(Curso, through='Matrícula', related_name='alumnos', verbose_name='cursos')
 
     def __str__(self):
         return str(self.socio)
@@ -101,6 +101,26 @@ class Alumno(models.Model):
         verbose_name = 'Alumno'
         verbose_name_plural = 'Alumnos'
         ordering = ['socio__nombre']
+
+
+class Matrícula(models.Model):
+    """Una alumna en un curso. Era la tabla intermedia automática de Alumno.cursos, y
+    sigue en la misma tabla: si se hizo explícita fue para poder eximirla de pago."""
+
+    alumno = models.ForeignKey(Alumno, on_delete=models.CASCADE, related_name='matrículas', verbose_name='alumna')
+    curso = models.ForeignKey(Curso, on_delete=models.CASCADE, related_name='matrículas', verbose_name='curso')
+    exento_pago = models.BooleanField(
+        'exenta de pago', default=False,
+        help_text='No paga este curso, así que no sale en el aviso de pagos pendientes.')
+
+    def __str__(self):
+        return f'{self.alumno} — {self.curso.nombre}'
+
+    class Meta:
+        db_table = 'clases_alumno_cursos'
+        verbose_name = 'Matrícula'
+        verbose_name_plural = 'Matrículas'
+        unique_together = [('alumno', 'curso')]
 
 
 class Clase(models.Model):

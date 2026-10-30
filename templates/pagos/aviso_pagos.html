@@ -1,0 +1,47 @@
+{% if sin_pagar or por_pagar %}
+<section class="aviso">
+    <h2 class="h5">Pagos</h2>
+    {% if sin_pagar %}
+    <p class="text-danger fw-semibold">No tienen ningún pago que cubra hoy:</p>
+    <table class="table table-sm">
+        <thead>
+            <tr>
+                <th scope="col">Alumna</th>
+                <th scope="col">Curso</th>
+                <th scope="col" class="text-end text-nowrap">Pagado hasta</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for pendiente in sin_pagar %}
+            <tr>
+                <td class="text-danger fw-semibold">{{ pendiente.matrícula.alumno }}</td>
+                <td>{{ pendiente.matrícula.curso.nombre }}</td>
+                <td class="text-end text-nowrap">{% if pendiente.cubierto_hasta %}{{ pendiente.cubierto_hasta|date:'d/m/Y' }}{% else %}Nunca ha pagado{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+    {% if por_pagar %}
+    <p>Deben pagar próximamente:</p>
+    <table class="table table-sm">
+        <thead>
+            <tr>
+                <th scope="col">Alumna</th>
+                <th scope="col">Curso</th>
+                <th scope="col" class="text-end text-nowrap">Desde el</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for pendiente in por_pagar %}
+            <tr>
+                <td>{{ pendiente.matrícula.alumno }}</td>
+                <td>{{ pendiente.matrícula.curso.nombre }}</td>
+                <td class="text-end text-nowrap">{{ pendiente.vence|date:'d/m/Y' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</section>
+{% endif %}

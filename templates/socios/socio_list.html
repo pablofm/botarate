@@ -15,7 +15,6 @@
     <div class="input-group">
         <input class="form-control" type="search" name="q" value="{{ view.búsqueda }}"
                placeholder="Nombre, documento, teléfono o email" aria-label="Buscar socias">
-        {# Al buscar se mantiene el orden elegido. #}
         <input type="hidden" name="orden" value="{{ view.orden }}">
         <button class="btn btn-outline-secondary" type="submit">
             <i class="bi bi-search" aria-hidden="true"></i> Buscar
@@ -91,7 +90,6 @@
     </table>
 </div>
 
-{# Los diálogos van fuera de la tabla: dentro de una fila el navegador los sacaría de ahí. #}
 {% for socio in socios %}
 {% with notas=socio.notas.all %}
 {% if notas %}

@@ -10,7 +10,6 @@
 
 {% block campos %}
 {% bootstrap_form_errors form type='non_fields' %}
-{# Fecha, producto, unidades y forma de pago: los campos de las ventas, en este orden. #}
 <div class="row">
     {% for campo in form %}
     <div class="col-md-6 col-lg-{% cycle 2 4 2 4 %}">{% bootstrap_field campo %}</div>

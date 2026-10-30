@@ -1,16 +1,27 @@
 from django.contrib import admin
 
 from .forms import ClaseForm, CursoForm
-from .models import Alumno, Clase, Curso, DíaSemana
+from .models import Alumno, Clase, Curso, DíaSemana, Matrícula
 
 
 class MatrículaInline(admin.TabularInline):
-    """Las alumnas del curso, a través de la tabla intermedia de Alumno.cursos."""
+    """Las alumnas del curso, con su matrícula."""
 
-    model = Alumno.cursos.through
+    model = Matrícula
+    fields = ('alumno', 'exento_pago')
     verbose_name = 'alumna'
     verbose_name_plural = 'alumnas'
     autocomplete_fields = ('alumno',)
+    extra = 1
+
+
+class CursoDeLaAlumnaInline(admin.TabularInline):
+    """Los cursos de la alumna, con su matrícula."""
+
+    model = Matrícula
+    fields = ('curso', 'exento_pago')
+    verbose_name = 'curso'
+    verbose_name_plural = 'cursos'
     extra = 1
 
 
@@ -52,7 +63,7 @@ class AlumnoAdmin(admin.ModelAdmin):
     list_filter = ('cursos',)
     search_fields = ('socio__nombre', 'socio__documento', 'socio__teléfono', 'socio__email')
     autocomplete_fields = ('socio',)
-    filter_horizontal = ('cursos',)
+    inlines = [CursoDeLaAlumnaInline]
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('socio').prefetch_related('cursos')

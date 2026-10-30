@@ -1,24 +1,26 @@
-{# Sale en todas las páginas de un apartado de ventas; «por_reponer» y «producto» los pone ApartadoMixin. #}
-{% if por_reponer %}
-<div class="alert alert-danger" role="alert">
-    <p class="mb-2 text-center">Hay que comprar {% if por_reponer|length == 1 %}esta {{ producto }}, que está{% else %}estas {{ producto }}s, que están{% endif %} por debajo del stock mínimo:</p>
-    <table class="table table-sm table-borderless mb-0 mx-auto w-auto bg-transparent">
+{% for apartado in por_reponer %}
+{% with producto=apartado.producto artículos=apartado.artículos %}
+<section class="aviso">
+    <h2 class="h5">{{ apartado.título }}</h2>
+    <p>Hay que comprar {% if artículos|length == 1 %}esta {{ producto }}, que está{% else %}estas {{ producto }}s, que están{% endif %} por debajo del stock mínimo:</p>
+    <table class="table table-sm">
         <thead>
             <tr>
-                <th scope="col" class="bg-transparent text-danger-emphasis">{{ producto|capfirst }}</th>
-                <th scope="col" class="bg-transparent text-danger-emphasis text-end text-nowrap">Stock actual</th>
-                <th scope="col" class="bg-transparent text-danger-emphasis text-end text-nowrap">Stock mínimo</th>
+                <th scope="col">{{ producto|capfirst }}</th>
+                <th scope="col" class="text-end text-nowrap">Stock actual</th>
+                <th scope="col" class="text-end text-nowrap">Stock mínimo</th>
             </tr>
         </thead>
         <tbody>
-            {% for artículo in por_reponer %}
+            {% for artículo in artículos %}
             <tr>
-                <td class="bg-transparent text-danger-emphasis">{{ artículo }}</td>
-                <td class="bg-transparent text-danger-emphasis text-end fw-semibold">{{ artículo.stock_actual }}</td>
-                <td class="bg-transparent text-danger-emphasis text-end">{{ artículo.stock_mínimo }}</td>
+                <td>{{ artículo }}</td>
+                <td class="text-end fw-semibold">{{ artículo.stock_actual }}</td>
+                <td class="text-end">{{ artículo.stock_mínimo }}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
-</div>
-{% endif %}
+</section>
+{% endwith %}
+{% endfor %}

@@ -16,9 +16,9 @@
     <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">
         <span class="fw-medium">{{ alumna.socio.nombre }}</span>
         <span class="d-flex flex-wrap justify-content-end gap-1">
-            {% for curso in alumna.cursos.all %}
+            {% for matrícula in alumna.matrículas.all %}
             <a class="badge rounded-pill text-bg-light border fw-normal text-decoration-none link-body-emphasis"
-               href="{% url 'curso_detalle' curso.pk %}">{{ curso.nombre }}</a>
+               href="{% url 'curso_detalle' matrícula.curso.pk %}">{{ matrícula.curso.nombre }}{% if matrícula.exento_pago %} · exenta de pago{% endif %}</a>
             {% endfor %}
         </span>
     </li>

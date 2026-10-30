@@ -7,7 +7,6 @@
 {% endblock breadcrumb %}
 
 {% block content %}
-{% include "ventas/aviso_stock.html" %}
 {% include "ventas/pestanas.html" with actual='ventas_camisetas' %}
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -58,7 +57,6 @@
     </table>
 </div>
 
-{# Los diálogos van fuera de la tabla: dentro de una fila el navegador los sacaría de ahí. #}
 {% for venta in ventas %}
 {% url 'venta_camiseta_eliminar' venta.pk as url %}
 {% include "ventas/eliminar.html" with objeto=venta url=url título='Eliminar venta' %}

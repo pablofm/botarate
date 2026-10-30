@@ -4,7 +4,7 @@ from django import forms
 from apps.socios.forms import SocioChoiceField
 from apps.socios.models import Socio
 
-from .models import Alumno, Clase, Curso, DíaSemana
+from .models import Alumno, Clase, Curso, DíaSemana, Matrícula
 
 
 class CursoForm(forms.ModelForm):
@@ -41,6 +41,8 @@ class MatricularAlumnaForm(forms.Form):
         empty_label='Elige una socia',
         help_text='Si no aparece, hay que darla de alta antes como socia.')
     curso = forms.ModelChoiceField(label='Curso', queryset=Curso.objects.all(), empty_label=None)
+    exento_pago = forms.BooleanField(
+        label='Exenta de pago', required=False, help_text=Matrícula._meta.get_field('exento_pago').help_text)
 
     def clean(self):
         cleaned_data = super().clean()
@@ -52,7 +54,8 @@ class MatricularAlumnaForm(forms.Form):
 
     def matricular(self):
         alumno, _ = Alumno.objects.get_or_create(socio=self.cleaned_data['socio'])
-        alumno.cursos.add(self.cleaned_data['curso'])
+        Matrícula.objects.create(
+            alumno=alumno, curso=self.cleaned_data['curso'], exento_pago=self.cleaned_data['exento_pago'])
         return alumno
 
 

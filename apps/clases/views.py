@@ -11,7 +11,7 @@ from django.views.generic import DeleteView, DetailView, FormView, ListView, Upd
 from apps.accounts.mixins import SoloAdministraciónMixin
 
 from .forms import ClaseForm, MatricularAlumnaForm, TerminarClaseForm
-from .models import Alumno, Clase, Curso
+from .models import Alumno, Clase, Curso, Matrícula
 
 
 class DashboardView(ListView):
@@ -52,7 +52,10 @@ class CursoDetailView(DetailView):
         clases = Clase.objects.select_related('profesor').prefetch_related('asistentes__socio')
         return (super().get_queryset()
                 .select_related('profesor_principal')
-                .prefetch_related('alumnos__socio', Prefetch('clases', queryset=clases)))
+                .prefetch_related(
+                    Prefetch('matrículas', queryset=Matrícula.objects.select_related('alumno__socio').order_by(
+                        'alumno__socio__nombre')),
+                    Prefetch('clases', queryset=clases)))
 
 
 class ClaseListView(ListView):
@@ -133,7 +136,9 @@ class MatrículaListView(SoloAdministraciónMixin, ListView):
         return (super().get_queryset()
                 .filter(cursos__isnull=False)
                 .select_related('socio')
-                .prefetch_related('cursos')
+                .prefetch_related(Prefetch(
+                    'matrículas', queryset=Matrícula.objects.select_related('curso').order_by(
+                        'curso__días_semana', 'curso__hora_inicio', 'curso__nombre')))
                 .distinct())
 
 
@@ -158,6 +163,26 @@ class MatricularAlumnaView(SoloAdministraciónMixin, FormView):
 
     def get_success_url(self):
         return reverse('curso_detalle', args=[self.curso.pk])
+
+
+class MatrículaUpdateView(SoloAdministraciónMixin, SuccessMessageMixin, UpdateView):
+    """La matrícula de una alumna en un curso: de ella solo se cambia si está exenta de pago.
+    Cambiar de curso es otra matrícula, y los datos personales son de la ficha de socia."""
+
+    model = Matrícula
+    fields = ['exento_pago']
+    template_name = 'clases/matricula_form.html'
+    context_object_name = 'matrícula'
+    success_message = 'Se ha guardado la matrícula de %(alumna)s en %(curso)s.'
+
+    def get_queryset(self):
+        return super().get_queryset().select_related('alumno__socio', 'curso')
+
+    def get_success_message(self, cleaned_data):
+        return self.success_message % {'alumna': self.object.alumno, 'curso': self.object.curso.nombre}
+
+    def get_success_url(self):
+        return reverse('curso_detalle', args=[self.object.curso_id])
 
 
 class DesmatricularAlumnaView(SoloAdministraciónMixin, View):
