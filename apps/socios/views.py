@@ -10,6 +10,8 @@ from django.utils.decorators import method_decorator
 from django.utils.functional import cached_property
 from django.views.generic import CreateView, ListView, TemplateView, UpdateView
 
+from apps.clases.models import Matrícula
+
 from .forms import NotaForm, SocioForm
 from .models import Nota, Socio
 
@@ -104,6 +106,12 @@ class SocioUpdateView(SuccessMessageMixin, UpdateView):
 
     def get_queryset(self):
         return super().get_queryset().prefetch_related('notas__autor')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['matrículas'] = Matrícula.objects.filter(alumno__socio=self.object).select_related('curso').order_by(
+            'curso__días_semana', 'curso__hora_inicio', 'curso__nombre')
+        return context
 
     def get_success_url(self):
         return reverse('socios')

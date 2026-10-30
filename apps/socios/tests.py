@@ -5,7 +5,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from apps.clases.models import Alumno, Curso, DíaSemana
+from apps.clases.models import Alumno, Curso, DíaSemana, Matrícula
 
 from .models import Nota, Socio, TipoDocumento
 
@@ -320,3 +320,58 @@ class NotasTests(TestCase):
 
         contenido = respuesta.content.decode()
         self.assertLess(contenido.index('Reciente'), contenido.index('Antigua'))
+
+
+class CursosEnLaFichaTests(TestCase):
+    """La ficha de cada socia lista los cursos en los que está matriculada."""
+
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        cls.administrativo = User.objects.create_user(
+            email='admin@botarate.es', password='x', is_active=True, is_staff=True)
+        cls.profesor = User.objects.create_user(email='profe@botarate.es', password='x', is_active=True)
+        cls.socia = Socio.objects.create(
+            nombre='Ana Ruiz', documento='12345678Z', teléfono='600 123 456', email='ana@example.com')
+        cls.acrobacia, cls.esgrima, cls.clown = (
+            Curso.objects.create(
+                nombre=nombre, días_semana=[DíaSemana.LUNES], hora_inicio=datetime.time(18, 0),
+                hora_fin=datetime.time(19, 30), profesor_principal=cls.profesor)
+            for nombre in ('Acrobacia', 'Esgrima escénica', 'Clown'))
+        alumna = Alumno.objects.create(socio=cls.socia)
+        alumna.cursos.add(cls.acrobacia, cls.esgrima)
+        Matrícula.objects.filter(curso=cls.esgrima).update(exento_pago=True)
+        cls.ficha = reverse('socio_editar', args=[cls.socia.pk])
+
+    def test_lista_sus_cursos_y_no_los_demás(self):
+        self.client.force_login(self.administrativo)
+
+        respuesta = self.client.get(self.ficha)
+
+        self.assertContains(respuesta, 'Cursos (2)')
+        for curso in (self.acrobacia, self.esgrima):
+            with self.subTest(curso=curso.nombre):
+                self.assertContains(respuesta, reverse('curso_detalle', args=[curso.pk]))
+                matrícula = Matrícula.objects.get(curso=curso)
+                self.assertContains(respuesta, reverse('matricula_editar', args=[matrícula.pk]))
+        self.assertNotContains(respuesta, 'Clown')
+        self.assertContains(respuesta, 'exenta de pago', count=1)
+
+    def test_el_profesorado_ve_los_cursos_pero_no_las_matrículas(self):
+        self.client.force_login(self.profesor)
+
+        respuesta = self.client.get(self.ficha)
+
+        self.assertContains(respuesta, reverse('curso_detalle', args=[self.acrobacia.pk]))
+        self.assertNotContains(respuesta, 'Editar matrícula')
+        self.assertNotContains(respuesta, 'exenta de pago')
+
+    def test_sin_matrículas_lo_dice(self):
+        self.client.force_login(self.administrativo)
+        otra = Socio.objects.create(
+            nombre='Eva Gil', documento='00000000T', teléfono='600 000 000', email='eva@example.com')
+
+        respuesta = self.client.get(reverse('socio_editar', args=[otra.pk]))
+
+        self.assertContains(respuesta, 'Cursos (0)')
+        self.assertContains(respuesta, 'Eva Gil no está matriculada en ningún curso.')

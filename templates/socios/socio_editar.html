@@ -41,6 +41,26 @@
     </div>
 </div>
 
+<h2 class="h5 mt-5">Cursos ({{ matrículas|length }})</h2>
+{% if matrículas %}
+<ul class="list-group mb-4">
+    {% for matrícula in matrículas %}
+    <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span>
+            <a class="fw-medium" href="{% url 'curso_detalle' matrícula.curso.pk %}">{{ matrícula.curso.nombre }}</a>
+            <span class="text-body-secondary">· {{ matrícula.curso.días_semana_display }}, de {{ matrícula.curso.hora_inicio|time:'H:i' }} a {{ matrícula.curso.hora_fin|time:'H:i' }}</span>
+            {% if es_administración and matrícula.exento_pago %}<span class="badge rounded-pill text-bg-light border fw-normal ms-1">exenta de pago</span>{% endif %}
+        </span>
+        {% if es_administración %}
+        <a class="btn btn-sm btn-outline-primary text-nowrap" href="{% url 'matricula_editar' matrícula.pk %}">Editar matrícula</a>
+        {% endif %}
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p class="text-body-secondary">{{ socio.nombre }} no está matriculada en ningún curso.</p>
+{% endif %}
+
 <h2 class="h5 mt-5">Bitácora</h2>
 {% with notas=socio.notas.all %}
 {% if notas %}
