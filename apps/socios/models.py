@@ -63,6 +63,8 @@ class Socio(models.Model):
         default=False,
         help_text='Acepto ser añadida/o al grupo de WhatsApp para recibir avisos y participar '
                   'en la comunidad interna.')
+    # Lo marca el equipo desde el listado cuando ya la ha añadido al grupo; no sale en el alta.
+    invitada_comunidad = models.BooleanField('invitada a la comunidad', default=False)
 
     def clean(self):
         super().clean()

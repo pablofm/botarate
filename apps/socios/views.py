@@ -4,11 +4,12 @@ from urllib.parse import urlencode
 from django.contrib.auth.decorators import login_not_required
 from django.contrib.messages.views import SuccessMessageMixin
 from django.db.models import Count, F, Func, Min, Q, Value
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.utils.functional import cached_property
-from django.views.generic import CreateView, ListView, TemplateView, UpdateView
+from django.views.generic import CreateView, ListView, TemplateView, UpdateView, View
 
 from apps.clases.models import Matrícula
 
@@ -28,9 +29,10 @@ class SocioListView(ListView):
     # pulsarlas la primera vez: la fecha, de la más reciente; las notas, de más a menos;
     # los consentimientos, primero quienes los dieron.
     COLUMNAS_ORDENABLES = {'fecha_alta': '-', 'nombre': '', 'comunicacion': '-',
-                           'comunidad': '-', 'cursos': '', 'notas': '-'}
+                           'comunidad': '-', 'invitada': '-', 'cursos': '', 'notas': '-'}
     # Las columnas que se llaman distinto que el campo por el que se ordenan.
-    CAMPOS_DE_COLUMNA = {'comunicacion': 'quiere_comunicaciones', 'comunidad': 'quiere_whatsapp'}
+    CAMPOS_DE_COLUMNA = {'comunicacion': 'quiere_comunicaciones', 'comunidad': 'quiere_whatsapp',
+                         'invitada': 'invitada_comunidad'}
     ORDEN_POR_DEFECTO = 'nombre'
 
     @cached_property
@@ -120,6 +122,23 @@ class SocioUpdateView(SuccessMessageMixin, UpdateView):
 
     def get_success_url(self):
         return reverse('socios')
+
+
+class InvitadaComunidadView(View):
+    """Marca o desmarca desde el listado que a la socia ya se la invitó a la comunidad.
+
+    Se manda el valor, no «cambiar»: así dos clics seguidos o dos pestañas abiertas no
+    lo dejan al revés de lo que se ve en pantalla.
+    """
+
+    http_method_names = ['post']
+
+    def post(self, request, pk):
+        socio = get_object_or_404(Socio, pk=pk)
+        socio.invitada_comunidad = request.POST.get('invitada_comunidad') == 'on'
+        socio.save(update_fields=['invitada_comunidad'])
+        # El listado lo manda con fetch para no recargarse ni perder dónde se estaba.
+        return JsonResponse({'invitada_comunidad': socio.invitada_comunidad})
 
 
 class NotaCreateView(SuccessMessageMixin, CreateView):

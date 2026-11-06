@@ -34,6 +34,7 @@
                 <th scope="col" colspan="2">Teléfono</th>
                 {% include 'socios/columna_ordenable.html' with columna=columnas.comunicacion texto='Comunicación' clase='text-center' %}
                 {% include 'socios/columna_ordenable.html' with columna=columnas.comunidad texto='Comunidad' clase='text-center' %}
+                {% include 'socios/columna_ordenable.html' with columna=columnas.invitada texto='Invitada' clase='text-center' %}
                 {% include 'socios/columna_ordenable.html' with columna=columnas.cursos texto='Cursos' %}
                 {% include 'socios/columna_ordenable.html' with columna=columnas.notas texto='Notas' clase='text-center' %}
                 <th scope="col" class="text-end"><span class="visually-hidden">Acciones</span></th>
@@ -48,7 +49,7 @@
                 <td class="ps-1">
                     <a class="btn btn-sm btn-outline-success"
                        href="{{ socio.enlace_whatsapp }}"
-                       target="_blank" rel="noopener"
+                       target="whatsapp"
                        title="Escribir por WhatsApp"
                        aria-label="Escribir a {{ socio.nombre }} por WhatsApp">
                         <i class="bi bi-whatsapp" aria-hidden="true"></i>
@@ -56,6 +57,15 @@
                 </td>
                 {% include 'socios/consentimiento.html' with activo=socio.quiere_comunicaciones etiqueta='Comunicación' %}
                 {% include 'socios/consentimiento.html' with activo=socio.quiere_whatsapp etiqueta='Comunidad' %}
+                <td class="text-center">
+                    <form class="invitada-comunidad" method="POST" action="{% url 'socio_invitada' socio.pk %}">
+                        {% csrf_token %}
+                        <input class="form-check-input" type="checkbox" name="invitada_comunidad"
+                               {% if socio.invitada_comunidad %}checked{% endif %}
+                               title="Invitada a la comunidad"
+                               aria-label="{{ socio.nombre }} invitada a la comunidad">
+                    </form>
+                </td>
                 <td>
                     {% for curso in socio.alumno.cursos.all %}
                     <a href="{% url 'curso_detalle' curso.pk %}">{{ curso.nombre }}</a>{% if not forloop.last %}, {% endif %}
@@ -94,7 +104,7 @@
             </tr>
             {% empty %}
             <tr>
-                <td colspan="9" class="text-body-secondary">
+                <td colspan="10" class="text-body-secondary">
                     {% if view.búsqueda %}Ninguna socia coincide con «{{ view.búsqueda }}».{% else %}Todavía no hay socias dadas de alta.{% endif %}
                 </td>
             </tr>
@@ -135,3 +145,26 @@
 {% endwith %}
 {% endfor %}
 {% endblock content %}
+
+{% block scripts %}
+<script>
+    document.querySelectorAll('form.invitada-comunidad').forEach((formulario) => {
+        const casilla = formulario.querySelector('input[type=checkbox]');
+        casilla.addEventListener('change', async () => {
+            // Antes de desactivarla: una casilla desactivada no viaja en el FormData.
+            const datos = new FormData(formulario);
+            casilla.disabled = true;
+            try {
+                const respuesta = await fetch(formulario.action, {method: 'POST', body: datos});
+                if (!respuesta.ok) throw new Error(respuesta.status);
+                casilla.checked = (await respuesta.json()).invitada_comunidad;
+            } catch {
+                casilla.checked = !casilla.checked;
+                alert('No se ha podido guardar. Prueba otra vez.');
+            } finally {
+                casilla.disabled = false;
+            }
+        });
+    });
+</script>
+{% endblock scripts %}

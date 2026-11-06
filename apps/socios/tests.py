@@ -173,6 +173,7 @@ class OrdenSociosTests(TestCase):
 
         Socio.objects.filter(pk=cls.zoe.pk).update(quiere_comunicaciones=True)
         Socio.objects.filter(pk=cls.eva.pk).update(quiere_whatsapp=True)
+        Socio.objects.filter(pk=cls.zoe.pk).update(invitada_comunidad=True)
 
     def setUp(self):
         self.client.force_login(self.profesor)
@@ -197,6 +198,8 @@ class OrdenSociosTests(TestCase):
             '-comunicacion': ['Zoe Paz', 'Ana Ruiz', 'Eva Gil'],
             'comunidad': ['Ana Ruiz', 'Zoe Paz', 'Eva Gil'],
             '-comunidad': ['Eva Gil', 'Ana Ruiz', 'Zoe Paz'],
+            'invitada': ['Ana Ruiz', 'Eva Gil', 'Zoe Paz'],
+            '-invitada': ['Zoe Paz', 'Ana Ruiz', 'Eva Gil'],
         }
         for orden, nombres in casos.items():
             with self.subTest(orden=orden):
@@ -293,6 +296,13 @@ class NotasTests(TestCase):
         self.assertContains(self.client.get(reverse('socios')),
                             'href="https://web.whatsapp.com/send?phone=34600123456"')
 
+    def test_whatsapp_se_abre_siempre_en_la_misma_pestaña(self):
+        listado = self.client.get(reverse('socios'))
+
+        # Con nombre, y sin noopener, que impediría al navegador reutilizar la pestaña.
+        self.assertContains(listado, 'target="whatsapp"')
+        self.assertNotContains(listado, 'rel="noopener"')
+
     def test_el_enlace_de_whatsapp_respeta_el_prefijo(self):
         for teléfono, número in (('600 123 456', '34600123456'),
                                  ('+351 912.345.678', '351912345678'),
@@ -349,6 +359,71 @@ class NotasTests(TestCase):
 
         contenido = respuesta.content.decode()
         self.assertLess(contenido.index('Reciente'), contenido.index('Antigua'))
+
+
+class InvitadaComunidadTests(TestCase):
+    """Desde el listado se va marcando a quién se ha invitado ya a la comunidad de WhatsApp."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.profesor = get_user_model().objects.create_user(
+            email='profe@botarate.es', password='x', is_active=True)
+        cls.socia = Socio.objects.create(
+            nombre='Ana Ruiz', documento='12345678Z', teléfono='600 123 456', email='ana@example.com')
+        cls.url = reverse('socio_invitada', args=[cls.socia.pk])
+
+    def setUp(self):
+        self.client.force_login(self.profesor)
+
+    def test_marca_y_desmarca_desde_el_listado(self):
+        respuesta = self.client.post(self.url, {'invitada_comunidad': 'on'})
+
+        self.assertEqual(respuesta.json(), {'invitada_comunidad': True})
+        self.socia.refresh_from_db()
+        self.assertTrue(self.socia.invitada_comunidad)
+
+        # La casilla sin marcar no viaja en el formulario.
+        respuesta = self.client.post(self.url)
+
+        self.assertEqual(respuesta.json(), {'invitada_comunidad': False})
+        self.socia.refresh_from_db()
+        self.assertFalse(self.socia.invitada_comunidad)
+
+    def test_marcar_dos_veces_no_la_desmarca(self):
+        for _ in range(2):
+            self.client.post(self.url, {'invitada_comunidad': 'on'})
+
+        self.socia.refresh_from_db()
+        self.assertTrue(self.socia.invitada_comunidad)
+
+    def casilla(self, marcada):
+        return (f'<input class="form-check-input" type="checkbox" name="invitada_comunidad"'
+                f'{" checked" if marcada else ""} title="Invitada a la comunidad"'
+                f' aria-label="Ana Ruiz invitada a la comunidad">')
+
+    def test_el_listado_tiene_la_casilla_marcada_según_la_socia(self):
+        listado = self.client.get(reverse('socios')).content.decode()
+
+        self.assertIn(f'action="{self.url}"', listado)
+        self.assertInHTML(self.casilla(marcada=False), listado)
+
+        Socio.objects.filter(pk=self.socia.pk).update(invitada_comunidad=True)
+
+        self.assertInHTML(self.casilla(marcada=True), self.client.get(reverse('socios')).content.decode())
+
+    def test_solo_admite_post(self):
+        self.assertEqual(self.client.get(self.url).status_code, 405)
+
+    def test_pide_entrar(self):
+        self.client.logout()
+
+        self.client.post(self.url, {'invitada_comunidad': 'on'})
+
+        self.socia.refresh_from_db()
+        self.assertFalse(self.socia.invitada_comunidad)
+
+    def test_no_sale_en_el_formulario_de_alta(self):
+        self.assertNotContains(self.client.get(reverse('socio_nuevo')), 'invitada_comunidad')
 
 
 class CursosEnLaFichaTests(TestCase):

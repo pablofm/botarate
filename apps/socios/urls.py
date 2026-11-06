@@ -1,6 +1,7 @@
 from django.urls import path
 
-from .views import AltaHechaView, NotaCreateView, SocioCreateView, SocioListView, SocioUpdateView
+from .views import (AltaHechaView, InvitadaComunidadView, NotaCreateView, SocioCreateView, SocioListView,
+                    SocioUpdateView)
 
 urlpatterns = [
     # Portada abierta: es la que se enlaza desde el QR.
@@ -9,5 +10,6 @@ urlpatterns = [
     # A partir de aquí, solo el profesorado.
     path('socios/', SocioListView.as_view(), name='socios'),
     path('socios/<int:pk>/editar/', SocioUpdateView.as_view(), name='socio_editar'),
+    path('socios/<int:pk>/invitada/', InvitadaComunidadView.as_view(), name='socio_invitada'),
     path('socios/<int:pk>/notas/nueva/', NotaCreateView.as_view(), name='nota_nueva'),
 ]

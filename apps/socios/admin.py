@@ -13,8 +13,9 @@ class NotaInline(admin.TabularInline):
 class SocioAdmin(admin.ModelAdmin):
     inlines = [NotaInline]
     list_display = ('nombre', 'documento', 'teléfono', 'email', 'fecha_alta', 'es_alumno',
-                    'quiere_comunicaciones', 'quiere_whatsapp')
-    list_filter = ('tipo_documento', 'fecha_alta', 'quiere_comunicaciones', 'quiere_whatsapp')
+                    'quiere_comunicaciones', 'quiere_whatsapp', 'invitada_comunidad')
+    list_filter = ('tipo_documento', 'fecha_alta', 'quiere_comunicaciones', 'quiere_whatsapp',
+                   'invitada_comunidad')
     search_fields = ('nombre', 'documento', 'teléfono', 'email')
 
     @admin.display(description='Va a clase', boolean=True)
