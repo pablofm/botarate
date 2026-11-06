@@ -31,7 +31,9 @@
             <tr>
                 {% include 'socios/columna_ordenable.html' with columna=columnas.fecha_alta texto='Fecha de alta' %}
                 {% include 'socios/columna_ordenable.html' with columna=columnas.nombre texto='Nombre' %}
-                <th scope="col">Teléfono</th>
+                <th scope="col" colspan="2">Teléfono</th>
+                {% include 'socios/columna_ordenable.html' with columna=columnas.comunicacion texto='Comunicación' clase='text-center' %}
+                {% include 'socios/columna_ordenable.html' with columna=columnas.comunidad texto='Comunidad' clase='text-center' %}
                 {% include 'socios/columna_ordenable.html' with columna=columnas.cursos texto='Cursos' %}
                 {% include 'socios/columna_ordenable.html' with columna=columnas.notas texto='Notas' clase='text-center' %}
                 <th scope="col" class="text-end"><span class="visually-hidden">Acciones</span></th>
@@ -42,7 +44,18 @@
             <tr>
                 <td class="text-nowrap">{{ socio.fecha_alta|date:'d/m/Y' }}</td>
                 <td><a href="{% url 'socio_editar' socio.pk %}">{{ socio.nombre }}</a></td>
-                <td class="text-nowrap">{{ socio.teléfono }}</td>
+                <td class="text-nowrap pe-1">{{ socio.teléfono }}</td>
+                <td class="ps-1">
+                    <a class="btn btn-sm btn-outline-success"
+                       href="{{ socio.enlace_whatsapp }}"
+                       target="_blank" rel="noopener"
+                       title="Escribir por WhatsApp"
+                       aria-label="Escribir a {{ socio.nombre }} por WhatsApp">
+                        <i class="bi bi-whatsapp" aria-hidden="true"></i>
+                    </a>
+                </td>
+                {% include 'socios/consentimiento.html' with activo=socio.quiere_comunicaciones etiqueta='Comunicación' %}
+                {% include 'socios/consentimiento.html' with activo=socio.quiere_whatsapp etiqueta='Comunidad' %}
                 <td>
                     {% for curso in socio.alumno.cursos.all %}
                     <a href="{% url 'curso_detalle' curso.pk %}">{{ curso.nombre }}</a>{% if not forloop.last %}, {% endif %}
@@ -81,7 +94,7 @@
             </tr>
             {% empty %}
             <tr>
-                <td colspan="6" class="text-body-secondary">
+                <td colspan="9" class="text-body-secondary">
                     {% if view.búsqueda %}Ninguna socia coincide con «{{ view.búsqueda }}».{% else %}Todavía no hay socias dadas de alta.{% endif %}
                 </td>
             </tr>

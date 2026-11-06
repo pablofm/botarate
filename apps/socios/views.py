@@ -25,8 +25,12 @@ class SocioListView(ListView):
     SEPARADORES_TELÉFONO = r'[\s.-]'
 
     # Las columnas por las que se puede ordenar, con el sentido en que se ordenan al
-    # pulsarlas la primera vez: la fecha, de la más reciente; las notas, de más a menos.
-    COLUMNAS_ORDENABLES = {'fecha_alta': '-', 'nombre': '', 'cursos': '', 'notas': '-'}
+    # pulsarlas la primera vez: la fecha, de la más reciente; las notas, de más a menos;
+    # los consentimientos, primero quienes los dieron.
+    COLUMNAS_ORDENABLES = {'fecha_alta': '-', 'nombre': '', 'comunicacion': '-',
+                           'comunidad': '-', 'cursos': '', 'notas': '-'}
+    # Las columnas que se llaman distinto que el campo por el que se ordenan.
+    CAMPOS_DE_COLUMNA = {'comunicacion': 'quiere_comunicaciones', 'comunidad': 'quiere_whatsapp'}
     ORDEN_POR_DEFECTO = 'nombre'
 
     @cached_property
@@ -51,6 +55,7 @@ class SocioListView(ListView):
         elif columna == 'notas':
             socios = socios.annotate(número_notas=Count('notas'))
             columna = 'número_notas'
+        columna = self.CAMPOS_DE_COLUMNA.get(columna, columna)
         # Quien no va a clase queda al final en los dos sentidos.
         if self.orden.startswith('-'):
             criterio = F(columna).desc(nulls_last=True)

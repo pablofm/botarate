@@ -58,7 +58,8 @@ class Pago(models.Model):
     modalidad = models.CharField('modalidad', max_length=10, choices=Modalidad)
     desde = models.DateField(
         'desde',
-        help_text='Primer día que cubre el pago; en una clase suelta, el día de la clase.')
+        help_text='Primer día que cubre el pago: el 1 del mes en que empieza, porque se paga '
+                  'por meses naturales; en una clase suelta, el día de la clase.')
     importe = models.DecimalField(
         'importe (€)', max_digits=7, decimal_places=2, validators=[MinValueValidator(Decimal('0.01'))])
     forma_pago = models.CharField('forma de pago', max_length=13, choices=FormaPago)
@@ -68,6 +69,10 @@ class Pago(models.Model):
         on_delete=models.PROTECT,
         related_name='pagos_registrados',
         verbose_name='registrado por')
+    recibo_enviado = models.BooleanField(
+        'recibo enviado',
+        default=False,
+        help_text='Márcalo cuando se le haya enviado el recibo a la alumna.')
 
     @property
     def hasta(self):
@@ -83,6 +88,8 @@ class Pago(models.Model):
         if self._state.adding and self.forma_pago in FORMAS_PAGO_PENDIENTES:
             raise ValidationError(
                 {'forma_pago': f'{self.get_forma_pago_display()} está pendiente de activar.'})
+        if self.modalidad != Modalidad.CLASE and self.desde and self.desde.day != 1:
+            raise ValidationError({'desde': 'Los pagos por meses empiezan el día 1 del mes.'})
 
     def __str__(self):
         return f'{self.alumno} — {self.curso.nombre}: {self.importe} € ({self.get_modalidad_display()})'

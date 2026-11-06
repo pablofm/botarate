@@ -1,3 +1,6 @@
+import re
+from urllib.parse import urlencode
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -71,6 +74,17 @@ class Socio(models.Model):
                 ESIdentityCardNumberField(only_nif=True).clean(self.documento)
             except ValidationError as error:
                 raise ValidationError({'documento': error.messages}) from error
+
+    @property
+    def enlace_whatsapp(self):
+        """El enlace para escribirle por WhatsApp Web: pide el número con prefijo y solo
+        dígitos, así que a los que no lo traen se les supone el de España."""
+        número = re.sub(r'\D', '', self.teléfono)
+        if número.startswith('00'):
+            número = número[2:]
+        elif not self.teléfono.startswith('+'):
+            número = f'34{número}'
+        return f'https://web.whatsapp.com/send?{urlencode({"phone": número})}'
 
     @property
     def es_alumno(self):

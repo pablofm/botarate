@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, DeleteView, ListView
+from django.utils import timezone
+from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
 from apps.accounts.mixins import SoloAdministraciónMixin
 from apps.clases.models import Matrícula
@@ -26,6 +27,8 @@ class PagoCreateView(SoloAdministraciónMixin, CreateView):
 
     def get_initial(self):
         initial = super().get_initial()
+        # Lo normal es pagar el mes en curso.
+        initial['desde'] = timezone.localdate().replace(day=1)
         # Desde la ficha del curso llega ya elegida la alumna a la que se cobra.
         alumno, curso = self.request.GET.get('alumno'), self.request.GET.get('curso')
         if alumno and curso:
@@ -41,6 +44,26 @@ class PagoCreateView(SoloAdministraciónMixin, CreateView):
         messages.success(
             self.request,
             f'Pago de {pago.importe} € de {pago.alumno} para {pago.curso.nombre} registrado.')
+        return respuesta
+
+
+class PagoUpdateView(SoloAdministraciónMixin, UpdateView):
+    """Corrige un pago ya registrado, o apunta que se le envió el recibo."""
+
+    model = Pago
+    form_class = PagoForm
+    template_name = 'pagos/pago_form.html'
+    success_url = reverse_lazy('pagos')
+
+    def get_queryset(self):
+        return super().get_queryset().select_related('alumno__socio', 'curso')
+
+    def form_valid(self, form):
+        respuesta = super().form_valid(form)
+        pago = self.object
+        messages.success(
+            self.request,
+            f'Pago de {pago.importe} € de {pago.alumno} para {pago.curso.nombre} guardado.')
         return respuesta
 
 
@@ -61,3 +84,4 @@ class PagoDeleteView(SoloAdministraciónMixin, DeleteView):
             self.request,
             f'Pago de {pago.importe} € de {pago.alumno} para {pago.curso.nombre} eliminado.')
         return super().form_valid(form)
+

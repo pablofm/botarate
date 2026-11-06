@@ -171,6 +171,9 @@ class OrdenSociosTests(TestCase):
             Nota.objects.create(socio=cls.eva, texto='Llamó.')
         Nota.objects.create(socio=cls.zoe, texto='Llamó.')
 
+        Socio.objects.filter(pk=cls.zoe.pk).update(quiere_comunicaciones=True)
+        Socio.objects.filter(pk=cls.eva.pk).update(quiere_whatsapp=True)
+
     def setUp(self):
         self.client.force_login(self.profesor)
 
@@ -189,6 +192,11 @@ class OrdenSociosTests(TestCase):
             # Por el primer curso de cada una; quien no va a clase, siempre al final.
             'cursos': ['Zoe Paz', 'Ana Ruiz', 'Eva Gil'],
             '-cursos': ['Ana Ruiz', 'Zoe Paz', 'Eva Gil'],
+            # Por los consentimientos; a igualdad, por nombre.
+            'comunicacion': ['Ana Ruiz', 'Eva Gil', 'Zoe Paz'],
+            '-comunicacion': ['Zoe Paz', 'Ana Ruiz', 'Eva Gil'],
+            'comunidad': ['Ana Ruiz', 'Zoe Paz', 'Eva Gil'],
+            '-comunidad': ['Eva Gil', 'Ana Ruiz', 'Zoe Paz'],
         }
         for orden, nombres in casos.items():
             with self.subTest(orden=orden):
@@ -208,6 +216,7 @@ class OrdenSociosTests(TestCase):
         # Las demás columnas empiezan por su sentido natural.
         self.assertEqual(respuesta.context['columnas']['fecha_alta']['url'], '?q=example&orden=-fecha_alta')
         self.assertEqual(respuesta.context['columnas']['nombre']['url'], '?q=example&orden=nombre')
+        self.assertEqual(respuesta.context['columnas']['comunidad']['url'], '?q=example&orden=-comunidad')
 
 
 class ConsentimientosTests(TestCase):
@@ -279,6 +288,26 @@ class NotasTests(TestCase):
 
         self.assertContains(listado, '600 123 456')
         self.assertNotContains(listado, 'href="tel:')
+
+    def test_el_listado_enlaza_a_whatsapp_web(self):
+        self.assertContains(self.client.get(reverse('socios')),
+                            'href="https://web.whatsapp.com/send?phone=34600123456"')
+
+    def test_el_enlace_de_whatsapp_respeta_el_prefijo(self):
+        for teléfono, número in (('600 123 456', '34600123456'),
+                                 ('+351 912.345.678', '351912345678'),
+                                 ('0044 7700 900123', '447700900123')):
+            with self.subTest(teléfono=teléfono):
+                self.assertEqual(Socio(teléfono=teléfono).enlace_whatsapp,
+                                 f'https://web.whatsapp.com/send?phone={número}')
+
+    def test_el_listado_muestra_los_consentimientos_de_comunicación_y_comunidad(self):
+        Socio.objects.filter(pk=self.socia.pk).update(quiere_comunicaciones=True)
+
+        listado = self.client.get(reverse('socios'))
+
+        self.assertContains(listado, 'Comunicación: sí')
+        self.assertContains(listado, 'Comunidad: no')
 
     def test_el_listado_muestra_la_fecha_de_alta_en_hora_de_madrid(self):
         # A las 23:30 UTC del 31 de diciembre ya es 1 de enero en Madrid.

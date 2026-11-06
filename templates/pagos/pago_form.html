@@ -4,21 +4,63 @@
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Inicio</a></li>
 <li class="breadcrumb-item"><a href="{% url 'pagos' %}">Pagos</a></li>
-<li class="breadcrumb-item active" aria-current="page">Registrar pago</li>
+<li class="breadcrumb-item active" aria-current="page">{% if object %}Editar pago{% else %}Registrar pago{% endif %}</li>
 {% endblock breadcrumb %}
 
 {% block content %}
-<h1 class="h3 mb-4">Registrar un pago</h1>
+<h1 class="h3 mb-4">{% if object %}Editar el pago de {{ object.alumno }} para {{ object.curso.nombre }}{% else %}Registrar un pago{% endif %}</h1>
 
 <div class="row">
     <div class="col">
+        <div class="mb-4 p-3 border rounded text-center">
+            <div class="text-body-secondary">Importe del pago</div>
+            <output id="importe-pago" class="d-block display-4 fw-semibold" for="id_importe" aria-live="polite">—</output>
+        </div>
         {% include "campos_obligatorios.html" %}
         <form method="POST">
             {% csrf_token %}
-            {% bootstrap_form form %}
-            <button class="btn btn-primary" type="submit">Registrar pago</button>
+            {% bootstrap_form_errors form type='non_fields' %}
+            <div class="row">
+                {% for campo in form %}
+                <div class="col-md-6 col-lg-{% cycle 2 4 2 4 %}" id="campo-{{ campo.name }}">{% bootstrap_field campo %}</div>
+                {% endfor %}
+            </div>
+            <button class="btn btn-primary" type="submit">{% if object %}Guardar cambios{% else %}Registrar pago{% endif %}</button>
             <a class="btn btn-link" href="{% url 'pagos' %}">Cancelar</a>
         </form>
     </div>
 </div>
 {% endblock content %}
+
+{% block scripts %}
+{{ form.media }}
+<script>
+    // Los cursos no tienen precio: el recuadro repite, bien a la vista, el importe que se escribe.
+    (function () {
+        const campo = document.getElementById('id_importe');
+        const importe = document.getElementById('importe-pago');
+        const euros = new Intl.NumberFormat('es-ES', {style: 'currency', currency: 'EUR'});
+
+        function actualizar() {
+            const valor = parseFloat(campo.value);
+            importe.textContent = valor > 0 ? euros.format(valor) : '—';
+        }
+
+        campo.addEventListener('input', actualizar);
+        actualizar();
+    })();
+
+    // La clase suelta cubre el día del pago: el mes no hace falta.
+    (function () {
+        const modalidad = document.getElementById('id_modalidad');
+        const desde = document.getElementById('campo-desde');
+
+        function actualizar() {
+            desde.hidden = modalidad.querySelector('input:checked')?.value === 'CLASE';
+        }
+
+        modalidad.addEventListener('change', actualizar);
+        actualizar();
+    })();
+</script>
+{% endblock scripts %}

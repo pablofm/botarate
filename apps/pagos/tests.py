@@ -2,6 +2,7 @@ import datetime
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
@@ -60,6 +61,33 @@ class PagoTests(TestCase):
         self.assertEqual(pago.importe, Decimal('45.00'))
         self.assertEqual(pago.registrado_por, self.administrativo)
         self.assertEqual(pago.hasta, datetime.date(2026, 10, 31))
+
+    def test_desde_se_elige_por_mes_y_se_guarda_su_día_1(self):
+        formulario = self.client.get(reverse('pago_nuevo'))
+        self.assertContains(formulario, 'datepicker-widget.js')
+
+        self.client.post(reverse('pago_nuevo'), self.datos(modalidad=Modalidad.TRIMESTRAL, desde='2026-11-01'))
+
+        pago = Pago.objects.get()
+        self.assertEqual((pago.desde, pago.hasta), (datetime.date(2026, 11, 1), datetime.date(2027, 1, 31)))
+
+    def test_por_meses_hay_que_elegir_el_mes(self):
+        respuesta = self.client.post(reverse('pago_nuevo'), self.datos(desde=''))
+
+        self.assertFormError(respuesta.context['form'], 'desde', 'Elige el mes en que empieza lo que cubre el pago.')
+        self.assertFalse(Pago.objects.exists())
+
+    def test_la_clase_suelta_cubre_el_día_del_pago(self):
+        self.client.post(reverse('pago_nuevo'), self.datos(modalidad=Modalidad.CLASE, desde='', fecha='2026-10-14'))
+
+        pago = Pago.objects.get()
+        self.assertEqual((pago.desde, pago.hasta), (datetime.date(2026, 10, 14), datetime.date(2026, 10, 14)))
+
+    def test_por_meses_no_se_puede_empezar_a_mitad_de_mes(self):
+        pago = Pago(modalidad=Modalidad.MENSUAL, desde=datetime.date(2026, 10, 15))
+
+        with self.assertRaisesMessage(ValidationError, 'Los pagos por meses empiezan el día 1 del mes.'):
+            pago.clean()
 
     def test_cada_modalidad_cubre_su_periodo(self):
         esperado = {
@@ -155,6 +183,56 @@ class PagoTests(TestCase):
         self.assertEqual(
             self.client.post(reverse('pago_eliminar', args=[pago.pk])).status_code, 403)
         self.assertTrue(Pago.objects.exists())
+        editar = reverse('pago_editar', args=[pago.pk])
+        self.assertEqual(self.client.get(editar).status_code, 403)
+        self.assertEqual(self.client.post(editar, self.datos(recibo_enviado='on')).status_code, 403)
+        self.assertFalse(Pago.objects.get().recibo_enviado)
+
+    def test_el_recibo_empieza_sin_enviar_salvo_que_se_marque(self):
+        self.client.post(reverse('pago_nuevo'), self.datos())
+        self.client.post(reverse('pago_nuevo'), self.datos(recibo_enviado='on'))
+
+        self.assertEqual([pago.recibo_enviado for pago in Pago.objects.order_by('pk')], [False, True])
+
+    def test_el_listado_ofrece_editar_cada_pago_y_muestra_el_recibo_sin_cambiarlo(self):
+        self.client.post(reverse('pago_nuevo'), self.datos())
+        pago = Pago.objects.get()
+
+        listado = self.client.get(reverse('pagos'))
+
+        self.assertContains(listado, reverse('pago_editar', args=[pago.pk]))
+        self.assertContains(listado, 'Recibo pendiente')
+        self.assertNotContains(listado, f'action="/pagos/{pago.pk}/recibo/"')
+
+    def test_edita_un_pago_y_marca_el_recibo_enviado(self):
+        self.client.post(reverse('pago_nuevo'), self.datos())
+        pago = Pago.objects.get()
+        editar = reverse('pago_editar', args=[pago.pk])
+        self.assertEqual(self.client.get(editar).context['form'].initial['matrícula'], self.matrícula)
+
+        respuesta = self.client.post(editar, self.datos(importe='50.00', recibo_enviado='on'))
+
+        self.assertRedirects(respuesta, reverse('pagos'))
+        pago.refresh_from_db()
+        self.assertEqual(pago.importe, Decimal('50.00'))
+        self.assertTrue(pago.recibo_enviado)
+        self.assertEqual(pago.registrado_por, self.administrativo)
+        self.assertContains(self.client.get(reverse('pagos')), 'Recibo enviado')
+
+    def test_edita_el_pago_de_una_alumna_ya_desmatriculada(self):
+        self.client.post(reverse('pago_nuevo'), self.datos())
+        pago = Pago.objects.get()
+        self.client.post(reverse('alumno_desmatricular', args=[self.curso.pk, self.alumna.pk]))
+        editar = reverse('pago_editar', args=[pago.pk])
+        self.assertNotIn('matrícula', self.client.get(editar).context['form'].fields)
+
+        datos = self.datos(recibo_enviado='on')
+        del datos['matrícula']
+        self.assertRedirects(self.client.post(editar, datos), reverse('pagos'))
+
+        pago.refresh_from_db()
+        self.assertEqual((pago.alumno, pago.curso), (self.alumna, self.curso))
+        self.assertTrue(pago.recibo_enviado)
 
 
 class SumarMesesTests(SimpleTestCase):

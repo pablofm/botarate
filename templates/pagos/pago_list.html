@@ -19,10 +19,10 @@
                 <th scope="col">Alumna</th>
                 <th scope="col">Curso</th>
                 <th scope="col">Modalidad</th>
-                <th scope="col">Cubre</th>
                 <th scope="col" class="text-nowrap">Forma de pago</th>
                 <th scope="col" class="text-end">Importe</th>
                 <th scope="col" class="text-nowrap">Registrado por</th>
+                <th scope="col" class="text-center text-nowrap">Recibo</th>
                 <th scope="col" class="text-end"><span class="visually-hidden">Acciones</span></th>
             </tr>
         </thead>
@@ -33,17 +33,20 @@
                 <td>{{ pago.alumno.socio.nombre }}</td>
                 <td><a href="{% url 'curso_detalle' pago.curso.pk %}">{{ pago.curso.nombre }}</a></td>
                 <td>{{ pago.get_modalidad_display }}</td>
-                <td class="text-nowrap">
-                    {% if pago.desde == pago.hasta %}
-                    {{ pago.desde|date:'d/m/Y' }}
-                    {% else %}
-                    {{ pago.desde|date:'d/m/Y' }} - {{ pago.hasta|date:'d/m/Y' }}
-                    {% endif %}
-                </td>
                 <td>{{ pago.get_forma_pago_display }}</td>
                 <td class="text-end text-nowrap">{{ pago.importe }} €</td>
                 <td>{{ pago.registrado_por }}</td>
-                <td class="text-end">
+                <td class="text-center">
+                    {% if pago.recibo_enviado %}
+                    <i class="bi bi-check-lg text-success" aria-hidden="true" title="Recibo enviado"></i>
+                    <span class="visually-hidden">Recibo enviado</span>
+                    {% else %}
+                    <i class="bi bi-dash text-body-tertiary" aria-hidden="true" title="Recibo pendiente"></i>
+                    <span class="visually-hidden">Recibo pendiente</span>
+                    {% endif %}
+                </td>
+                <td class="text-end text-nowrap">
+                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'pago_editar' pago.pk %}">Editar</a>
                     <button type="button"
                             class="btn btn-sm btn-outline-danger text-nowrap"
                             data-bs-toggle="modal"
