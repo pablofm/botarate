@@ -1,5 +1,5 @@
 import re
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -8,6 +8,19 @@ from django.utils import timezone
 from localflavor.es.forms import ESIdentityCardNumberField
 
 from .validators import validar_teléfono
+
+# La invitación a la comunidad que queda escrita al abrir el chat de WhatsApp de una socia.
+MENSAJE_WHATSAPP = (
+    'Hola!\n\n'
+    'En algún momento te registraste como socia de Botarate porque te interesaba estar al tanto '
+    'de lo que ocurre en nuestra asociación y escuela. 💜\n\n'
+    'Para que sea más fácil compartir actividades, talleres, espectáculos y novedades, hemos creado '
+    'la Comunidad de WhatsApp de Botarate.\n\n'
+    'Si te apetece seguir conectada y recibir la información, puedes unirte aquí: '
+    '👉 https://chat.whatsapp.com/LHyUpmy4QzF52LkA2m1Tb3\n\n'
+    'Y si ahora mismo no te interesa, no pasa nada. Nos alegra igualmente haberte cruzado en el camino. 😊\n\n'
+    '¡Te esperamos!'
+)
 
 
 class TipoDocumento(models.TextChoices):
@@ -79,14 +92,16 @@ class Socio(models.Model):
 
     @property
     def enlace_whatsapp(self):
-        """El enlace para escribirle por WhatsApp Web: pide el número con prefijo y solo
-        dígitos, así que a los que no lo traen se les supone el de España."""
+        """El enlace para escribirle por WhatsApp Web con la invitación a la comunidad ya
+        escrita: pide el número con prefijo y solo dígitos, así que a los que no lo traen
+        se les supone el de España."""
         número = re.sub(r'\D', '', self.teléfono)
         if número.startswith('00'):
             número = número[2:]
         elif not self.teléfono.startswith('+'):
             número = f'34{número}'
-        return f'https://web.whatsapp.com/send?{urlencode({"phone": número})}'
+        return 'https://web.whatsapp.com/send?' + urlencode(
+            {'phone': número, 'text': MENSAJE_WHATSAPP}, quote_via=quote)
 
     @property
     def es_alumno(self):

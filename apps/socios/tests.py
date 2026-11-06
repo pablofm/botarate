@@ -1,4 +1,5 @@
 import datetime
+from urllib.parse import parse_qs, urlsplit
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -7,7 +8,7 @@ from django.utils import timezone
 
 from apps.clases.models import Alumno, Curso, DíaSemana, Matrícula
 
-from .models import Nota, Socio, TipoDocumento
+from .models import MENSAJE_WHATSAPP, Nota, Socio, TipoDocumento
 
 ALTA = {
     'nombre': 'Ana Ruiz',
@@ -294,7 +295,7 @@ class NotasTests(TestCase):
 
     def test_el_listado_enlaza_a_whatsapp_web(self):
         self.assertContains(self.client.get(reverse('socios')),
-                            'href="https://web.whatsapp.com/send?phone=34600123456"')
+                            'href="https://web.whatsapp.com/send?phone=34600123456&amp;text=')
 
     def test_whatsapp_se_abre_siempre_en_la_misma_pestaña(self):
         listado = self.client.get(reverse('socios'))
@@ -308,8 +309,15 @@ class NotasTests(TestCase):
                                  ('+351 912.345.678', '351912345678'),
                                  ('0044 7700 900123', '447700900123')):
             with self.subTest(teléfono=teléfono):
-                self.assertEqual(Socio(teléfono=teléfono).enlace_whatsapp,
-                                 f'https://web.whatsapp.com/send?phone={número}')
+                self.assertEqual(parse_qs(urlsplit(Socio(teléfono=teléfono).enlace_whatsapp).query)['phone'],
+                                 [número])
+
+    def test_el_enlace_de_whatsapp_lleva_la_invitación_escrita(self):
+        enlace = urlsplit(Socio(teléfono='600 123 456').enlace_whatsapp)
+
+        self.assertEqual((enlace.netloc, enlace.path), ('web.whatsapp.com', '/send'))
+        self.assertEqual(parse_qs(enlace.query)['text'], [MENSAJE_WHATSAPP])
+        self.assertNotIn('+', enlace.query)
 
     def test_el_listado_muestra_los_consentimientos_de_comunicación_y_comunidad(self):
         Socio.objects.filter(pk=self.socia.pk).update(quiere_comunicaciones=True)
